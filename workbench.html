@@ -8,7 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="我的工作台">
 <meta name="theme-color" content="#FFB6C1">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='36' fill='%23FF6B9D'/%3E%3Ctext x='90' y='118' font-size='100' text-anchor='middle'%3E%F0%9F%8C%B8%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
 <title>我的工作台</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
@@ -172,6 +173,10 @@ input,textarea,select{user-select:text;-webkit-user-select:text;max-width:100%;}
 }
 .textarea{resize:vertical;min-height:60px;border-radius:14px;}
 .select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FF6B9D' d='M6 9L1 4h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+/* 日期/时间输入框统一窄版，防止超出屏幕 */
+.input-date,.input-time{width:100%;max-width:160px;padding:8px 10px;font-size:13px;border-radius:12px;border:1.5px solid var(--primary-light);background:#fff;color:var(--text-main);font-family:inherit;}
+.input-date:focus,.input-time:focus{border-color:var(--primary-pink);outline:none;box-shadow:0 0 0 3px rgba(255,107,157,0.12);}
+input[type=date],input[type=time]{min-width:0;}
 .btn{
   background:var(--primary-pink);color:#fff;
   border:none;border-radius:20px;
@@ -322,6 +327,24 @@ input,textarea,select{user-select:text;-webkit-user-select:text;max-width:100%;}
   cursor:pointer;font-family:inherit;white-space:nowrap;
 }
 .bm-tab.active{background:var(--primary-pink);color:#fff;border-color:var(--primary-pink);font-weight:600;}
+
+/* 复盘碎碎念 */
+.rf-text-preview{
+  background:var(--bg-pink);border-radius:10px;padding:10px;
+  font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;
+  max-height:160px;overflow:hidden;position:relative;
+}
+.rf-text-preview.expanded{max-height:none;}
+.rf-full-modal{
+  position:fixed;inset:0;z-index:350;background:rgba(74,59,64,0.5);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.rf-full-modal.show{display:flex;}
+.rf-full-content{
+  background:#fff;border-radius:16px;padding:20px;
+  max-width:360px;width:100%;max-height:70vh;overflow-y:auto;
+  font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
+}
 
 /* 历史日历弹层 */
 #calendar-modal{
@@ -612,7 +635,7 @@ const Store = {
       },
       wishlist:{ items:[] },
       bodyMind:{
-        sleep:{ bedTime:'', wakeTime:'', quality:0, dreamt:false },
+        sleep:{ bedTime:'', wakeTime:'', quality:0, dreamt:false, records:[] },
         diet:{ breakfast:'', lunch:'', dinner:'', snack:'', fruit:'' },
         drink:{ takeoutTea:false, takeoutCoffee:false, diy:false, detail:'' },
         exercise:{ items:[] },
@@ -836,16 +859,52 @@ function renderPie(canvasId, labels, data, colors){
   if(State.chartCache[canvasId]){ try{State.chartCache[canvasId].destroy();}catch(e){} }
   const ctx=document.getElementById(canvasId);
   if(!ctx) return;
+  const total=data.reduce((s,v)=>s+v,0);
   State.chartCache[canvasId]=new Chart(ctx,{
     type:'doughnut',
     data:{ labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#fff' }] },
     options:{
       responsive:true, maintainAspectRatio:false,
-      cutout:'62%',
+      cutout:'50%',
       plugins:{
-        legend:{ position:'bottom', labels:{ font:{size:11}, color:'#9B8A8E', padding:8, usePointStyle:true, pointStyle:'circle' } }
+        legend:{ position:'bottom', labels:{ font:{size:11}, color:'#9B8A8E', padding:6, usePointStyle:true, pointStyle:'circle' } },
+        tooltip:{
+          callbacks:{
+            label:function(ctx){
+              const v=ctx.parsed;
+              const pct=total?Math.round(v/total*100):0;
+              return ctx.label+': '+v+'次 ('+pct+'%)';
+            }
+          }
+        },
+        // 在扇区上显示百分比
+        datalabels:{ display:false }
       }
-    }
+    },
+    // 自定义插件：在扇区中央显示百分比
+    plugins:[{
+      id:'piePercent',
+      afterDatasetsDraw(chart){
+        const ds=chart.data.datasets[0];
+        const meta=chart.getDatasetMeta(0);
+        const sum=ds.data.reduce((s,v)=>s+v,0);
+        ds.data.forEach((val,i)=>{
+          const el=meta.data[i];
+          if(!el||!val) return;
+          const pct=Math.round(val/sum*100);
+          if(pct===0) return;
+          const pos=el.tooltipPosition();
+          const ctx=chart.ctx;
+          ctx.save();
+          ctx.font='bold 12px sans-serif';
+          ctx.fillStyle='#fff';
+          ctx.textAlign='center';
+          ctx.textBaseline='middle';
+          ctx.fillText(pct+'%',pos.x,pos.y);
+          ctx.restore();
+        });
+      }
+    }]
   });
 }
 
@@ -962,6 +1021,10 @@ function renderHome(){
       <div class="progress-bar"><div class="progress-fill" style="width:${yearPlans.length?yearPlans.filter(p=>p.realizeDate).length/yearPlans.length*100:0}%"></div></div>
     </div>
 
+    ${renderHomeBodyMindOverview(d,day.bodyMind)}
+
+    ${renderHomeReadingReminder(d,day.readingQueue)}
+
     <div class="card" style="text-align:center;">
       <button class="btn btn-outline" onclick="Calendar.open()">📅 查看历史日历</button>
     </div>
@@ -972,6 +1035,40 @@ function renderHome(){
     renderPie('home-ben-pie',['已完成','未完成'],[benDone,Math.max(0,benTotal-benDone)],['#FF6B9D','#FFE4EC']);
     renderPie('home-tt-pie',['已完成','未完成'],[ttDone,Math.max(0,ttTotal-ttDone)],['#FFD93D','#FFF3C4']);
   },50);
+}
+
+function renderHomeBodyMindOverview(d,bm){
+  const items=[];
+  if(bm.sleep.bedTime||bm.sleep.wakeTime||bm.sleep.quality) items.push({emoji:'😴',label:'睡眠',val:bm.sleep.quality?('⭐'.repeat(bm.sleep.quality)):(bm.sleep.bedTime+'~'+bm.sleep.wakeTime)});
+  if(bm.diet.breakfast||bm.diet.lunch||bm.diet.dinner||bm.diet.snack||bm.diet.fruit) items.push({emoji:'🍱',label:'饮食',val:'已记录'});
+  if(bm.drink.takeoutTea||bm.drink.takeoutCoffee||bm.drink.diy||bm.drink.detail) items.push({emoji:'☕',label:'茶饮',val:'已记录'});
+  if(bm.exercise.items.length) items.push({emoji:'🏃',label:'锻炼',val:bm.exercise.items.length+'项 '+bm.exercise.items.reduce((s,i)=>s+(Number(i.duration)||0),0)+'分'});
+  if(bm.media.items.length) items.push({emoji:'📖',label:'观阅',val:bm.media.items.length+'项'});
+  if(bm.skincare.items.length) items.push({emoji:'🧴',label:'护肤',val:bm.skincare.items.length+'项'});
+  if(bm.bodyData.weight) items.push({emoji:'⚖️',label:'体重',val:bm.bodyData.weight+'kg'});
+  if(bm.medical.records.length) items.push({emoji:'🏥',label:'就医',val:bm.medical.records.length+'次'});
+  if(!items.length) return '';
+  return `
+    <div class="card">
+      <div class="card-title"><span class="emoji">🌿</span>今日身心成长总览</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${items.map(it=>`<span class="time-tag" style="font-size:12px;">${it.emoji} ${it.label}: ${Utils.esc(it.val)}</span>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderHomeReadingReminder(d,rq){
+  const undone=rq.items.filter(i=>!i.starred);
+  if(!undone.length) return '';
+  const soon=undone.filter(i=>{ if(!i.ddl) return false; const days=Math.round((Utils.parseDate(i.ddl)-Utils.parseDate(d))/86400000); return days<=3; });
+  return `
+    <div class="card" style="border-left:3px solid var(--sunflower);">
+      <div class="card-title"><span class="emoji">📚</span>待阅提醒</div>
+      <div style="font-size:13px;color:var(--text-sub);margin-bottom:4px;">还有 ${undone.length} 项待阅${soon.length?`，其中 ${soon.length} 项即将到期`:''}</div>
+      ${soon.length?soon.map(i=>`<div style="font-size:13px;padding:4px 0;border-bottom:1px dashed var(--primary-light);">${Utils.esc(i.title)} ${i.ddl?'⏰'+i.ddl:''}</div>`).join(''):''}
+    </div>
+  `;
 }
 
 /* ============================================================
@@ -1230,27 +1327,52 @@ function renderBodyMindSub(sub){
   if(sub.id==='sleep'){
     vc.innerHTML+=`
       <div class="card">
-        <div class="card-title"><span class="emoji">😴</span>睡眠记录</div>
-        <div class="field" style="margin-bottom:10px;">
-          <div class="field-label" style="font-size:13px;color:var(--text-sub);margin-bottom:4px;">入睡时间</div>
-          <input type="time" class="input" id="sleep-bed" value="${bm.bedTime||''}">
+        <div class="card-title"><span class="emoji">😴</span>今日睡眠</div>
+        <div class="field-row" style="margin-bottom:8px;gap:12px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;color:var(--text-sub);margin-bottom:3px;">🌙 入睡</div>
+            <input type="time" class="input-time" id="sleep-bed" value="${bm.bedTime||''}" style="width:100%;">
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;color:var(--text-sub);margin-bottom:3px;">☀️ 醒来</div>
+            <input type="time" class="input-time" id="sleep-wake" value="${bm.wakeTime||''}" style="width:100%;">
+          </div>
         </div>
-        <div class="field" style="margin-bottom:10px;">
-          <div class="field-label" style="font-size:13px;color:var(--text-sub);margin-bottom:4px;">醒来时间</div>
-          <input type="time" class="input" id="sleep-wake" value="${bm.wakeTime||''}">
-        </div>
-        <div class="field" style="margin-bottom:10px;">
-          <div class="field-label" style="font-size:13px;color:var(--text-sub);margin-bottom:4px;">睡眠质量</div>
+        <div class="field" style="margin-bottom:8px;">
+          <div style="font-size:12px;color:var(--text-sub);margin-bottom:4px;">睡眠质量</div>
           <div style="display:flex;gap:6px;">
-            ${[1,2,3,4,5].map(n=>`<button class="btn btn-sm ${bm.quality===n?'':'btn-outline'}" data-sleep-q="${n}" style="flex:1;">${'⭐'.repeat(n)}</button>`).join('')}
+            ${[1,2,3].map(n=>`<button class="btn btn-sm ${bm.quality===n?'':'btn-outline'}" data-sleep-q="${n}" style="flex:1;">${'⭐'.repeat(n)}</button>`).join('')}
           </div>
         </div>
         <div class="field">
-          <label class="checkbox-wrap"><input type="checkbox" id="sleep-dream" ${bm.dreamt?'checked':''}> 做梦了吗</label>
+          <label class="checkbox-wrap"><input type="checkbox" id="sleep-dream" ${bm.dreamt?'checked':''}> 💭 做梦了吗</label>
         </div>
-        <button class="btn" style="margin-top:10px;width:100%;" onclick="saveSleep('${d}')">💾 保存</button>
+        <button class="btn" style="margin-top:10px;width:100%;" onclick="saveSleep('${d}')">💾 保存今日</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="emoji">📊</span>${d.slice(0,7)} 睡眠质量分布</div>
+        <div class="chart-container medium"><canvas id="sleep-month-pie"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="emoji">📋</span>历史睡眠记录</div>
+        <div id="sleep-history">
+          ${(bm.records||[]).length?(bm.records||[]).map((r,i)=>`
+            <div class="list-item-card" style="margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+                <span style="font-size:13px;font-weight:600;">${r.date||'-'}</span>
+                <span style="font-size:12px;color:var(--text-sub);">${r.bedTime||''}~${r.wakeTime||''}</span>
+                <span style="font-size:12px;">${'⭐'.repeat(r.quality||0)}</span>
+                ${r.dreamt?'<span style="font-size:12px;">💭</span>':''}
+                <button class="del-time" data-sleep-del="${i}" style="margin-left:auto;font-size:14px;">✕</button>
+              </div>
+              <button class="btn btn-sm btn-outline" data-sleep-add-history="${i}" style="font-size:12px;width:100%;">📌 添加到历史</button>
+            </div>
+          `).join(''):'<div class="empty-state" style="padding:16px;"><span class="emoji">📋</span>暂无历史记录</div>'}
+        </div>
+        <button class="btn btn-sm btn-outline" style="margin-top:8px;width:100%;" data-sleep-add-today>📌 把今日记录加入历史</button>
       </div>
     `;
+    setTimeout(()=>renderSleepMonthPie(d),50);
   }
   else if(sub.id==='diet'){
     vc.innerHTML+=`
@@ -1328,22 +1450,22 @@ function renderBodyMindSub(sub){
           ${bm.items.length?bm.items.map((it,i)=>`
             <div class="list-item-card" style="margin-bottom:8px;">
               <div class="field-row" style="margin-bottom:6px;">
-                <input type="text" class="input" value="${Utils.esc(it.title)}" data-m-title="${i}" placeholder="标题" style="flex:1;">
-                <select class="select" data-m-type="${i}" style="width:80px;">
+                <input type="text" class="input" value="${Utils.esc(it.title)}" data-m-title="${i}" placeholder="标题" style="flex:3 1 120px;min-width:0;">
+                <select class="select" data-m-type="${i}" style="width:64px;flex-shrink:0;">
                   <option value="阅读" ${it.type==='阅读'?'selected':''}>阅读</option>
                   <option value="观影" ${it.type==='观影'?'selected':''}>观影</option>
                 </select>
-                <button class="del-time" data-m-del="${i}" style="font-size:16px;">✕</button>
+                <button class="del-time" data-m-del="${i}" style="font-size:16px;flex-shrink:0;">✕</button>
               </div>
               <div class="field-row" style="margin-bottom:6px;">
-                <input type="url" class="input" value="${Utils.esc(it.url||'')}" data-m-url="${i}" placeholder="🔗 链接" style="flex:1;">
+                <input type="url" class="input" value="${Utils.esc(it.url||'')}" data-m-url="${i}" placeholder="🔗 链接" style="flex:1;min-width:0;">
               </div>
               <div class="field-row">
-                <input type="number" class="input" value="${it.duration||''}" data-m-dur="${i}" placeholder="时长" style="width:70px;">
-                <span style="font-size:12px;color:var(--text-sub);">分钟</span>
-                <input type="number" class="input" value="${it.progress||0}" data-m-prog="${i}" placeholder="完成度" min="0" max="100" style="width:70px;">
-                <span style="font-size:12px;color:var(--text-sub);">%</span>
-                <label class="checkbox-wrap"><input type="checkbox" data-m-done="${i}" ${it.completed?'checked':''}>完成</label>
+                <input type="number" class="input" value="${it.duration||''}" data-m-dur="${i}" placeholder="时长" style="width:64px;flex-shrink:0;">
+                <span style="font-size:12px;color:var(--text-sub);flex-shrink:0;">分</span>
+                <input type="number" class="input" value="${it.progress||0}" data-m-prog="${i}" placeholder="完成度%" min="0" max="100" style="width:80px;flex-shrink:0;">
+                <span style="font-size:12px;color:var(--text-sub);flex-shrink:0;">%</span>
+                <label class="checkbox-wrap" style="flex-shrink:0;"><input type="checkbox" data-m-done="${i}" ${it.completed?'checked':''}>完成</label>
               </div>
             </div>
           `).join(''):'<div class="empty-state"><span class="emoji">📚</span>今天还没阅读/观影~</div>'}
@@ -1415,11 +1537,12 @@ function renderBodyMindSub(sub){
           ${bm.records.length?bm.records.map((r,i)=>`
             <div class="list-item-card" style="margin-bottom:8px;">
               <div class="field-row" style="margin-bottom:6px;">
-                <input type="text" class="input" value="${Utils.esc(r.diagnosis)}" data-med-diag="${i}" placeholder="确诊疾病" style="flex:1;">
-                <button class="del-time" data-med-del="${i}" style="font-size:16px;">✕</button>
+                <input type="date" class="input-date" value="${r.date||''}" data-med-date="${i}" style="flex-shrink:0;">
+                <input type="text" class="input" value="${Utils.esc(r.diagnosis)}" data-med-diag="${i}" placeholder="确诊疾病" style="flex:1;min-width:0;">
+                <button class="del-time" data-med-del="${i}" style="font-size:16px;flex-shrink:0;">✕</button>
               </div>
               <div class="field-row" style="margin-bottom:6px;">
-                <input type="text" class="input" value="${Utils.esc(r.duration||'')}" data-med-dur="${i}" placeholder="历时（如3天）" style="flex:1;">
+                <input type="text" class="input" value="${Utils.esc(r.duration||'')}" data-med-dur="${i}" placeholder="历时（如3天）" style="flex:1;min-width:0;">
               </div>
               <textarea class="textarea" data-med-detail="${i}" placeholder="详情">${Utils.esc(r.detail||'')}</textarea>
             </div>
@@ -1443,18 +1566,43 @@ function renderBodyMindSub(sub){
     if(medDel){ const day=Store.getDay(d); day.bodyMind.medical.records.splice(parseInt(medDel.dataset.medDel),1); Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render(); return; }
     const sleepQ=e.target.closest('[data-sleep-q]');
     if(sleepQ){ const day=Store.getDay(d); day.bodyMind.sleep.quality=parseInt(sleepQ.dataset.sleepQ); Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render(); return; }
+    const sleepDel=e.target.closest('[data-sleep-del]');
+    if(sleepDel){ const day=Store.getDay(d); day.bodyMind.sleep.records.splice(parseInt(sleepDel.dataset.sleepDel),1); Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render(); return; }
+    const sleepAddToday=e.target.closest('[data-sleep-add-today]');
+    if(sleepAddToday){ const day=Store.getDay(d); const s=day.bodyMind.sleep; if(!s.bedTime&&!s.quality){Utils.toast('请先填写今日睡眠');return;} s.records=s.records||[]; s.records.push({date:d,bedTime:s.bedTime,wakeTime:s.wakeTime,quality:s.quality,dreamt:s.dreamt}); Store.saveDayModule(d,'bodyMind',day.bodyMind); Utils.toast('已加入历史~'); State.render(); return; }
   });
 }
 
 /* —— 身心成长保存函数 —— */
 function saveSleep(d){
   const day=Store.getDay(d);
+  const old=day.bodyMind.sleep;
   day.bodyMind.sleep={
     bedTime:val('sleep-bed'), wakeTime:val('sleep-wake'),
-    quality:day.bodyMind.sleep.quality, dreamt:document.getElementById('sleep-dream').checked
+    quality:old.quality, dreamt:document.getElementById('sleep-dream').checked,
+    records:old.records||[]
   };
   Store.saveDayModule(d,'bodyMind',day.bodyMind);
   Utils.toast('已保存~ 💤');
+}
+function renderSleepMonthPie(d){
+  const month=d.slice(0,7);
+  const data=Store._read().byDate;
+  let q1=0,q2=0,q3=0;
+  Object.keys(data).forEach(ds=>{
+    if(ds.startsWith(month)){
+      const s=data[ds]?.bodyMind?.sleep;
+      if(s){
+        if(s.quality===1)q1++;
+        if(s.quality===2)q2++;
+        if(s.quality===3)q3++;
+      }
+      (s?.records||[]).forEach(r=>{
+        if(r.quality===1)q1++; if(r.quality===2)q2++; if(r.quality===3)q3++;
+      });
+    }
+  });
+  renderPie('sleep-month-pie',['⭐ 差','⭐⭐ 一般','⭐⭐⭐ 好'],[q1,q2,q3],['#FF9999','#FFD93D','#A8E6CF']);
 }
 function saveDiet(d){
   const day=Store.getDay(d);
@@ -1570,6 +1718,7 @@ function saveMedical(d){
   const cards=document.querySelectorAll('#med-list .list-item-card');
   day.bodyMind.medical.records=Array.from(cards).map((c,i)=>({
     id:day.bodyMind.medical.records[i]?.id||Utils.uid(),
+    date:q(c,'[data-med-date]')?.value||'',
     diagnosis:q(c,'[data-med-diag]').value,
     duration:q(c,'[data-med-dur]').value,
     detail:q(c,'[data-med-detail]').value
@@ -1616,14 +1765,25 @@ function renderReadingQueue(){
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
               <span style="font-size:20px;cursor:pointer;" data-rq-star="${i}">${it.starred?'⭐':'☆'}</span>
               <span style="flex:1;font-weight:600;${it.starred?'color:var(--text-sub);text-decoration:line-through;':''}">${Utils.esc(it.title)}</span>
-              <button class="del-time" data-rq-del="${i}" style="font-size:16px;">✕</button>
+              <button class="del-time" data-rq-del="${i}" style="font-size:16px;flex-shrink:0;">✕</button>
             </div>
             <div class="field" style="margin-bottom:6px;">
-              <input type="url" class="input" value="${Utils.esc(it.url||'')}" data-rq-url="${i}" placeholder="🔗 链接">
+              <textarea class="textarea" data-rq-url="${i}" placeholder="🔗 链接" style="min-height:60px;font-size:13px;">${Utils.esc(it.url||'')}</textarea>
             </div>
-            <div class="field" style="margin-bottom:6px;">
-              <input type="date" class="input" value="${it.ddl||''}" data-rq-ddl="${i}">
+            <div class="field-row" style="margin-bottom:6px;gap:8px;">
+              <div style="flex:1;min-width:0;">
+                <select class="select" data-rq-platform="${i}" style="width:100%;">
+                  <option value="">平台</option>
+                  <option value="小红书" ${it.platform==='小红书'?'selected':''}>小红书</option>
+                  <option value="bilibili" ${it.platform==='bilibili'?'selected':''}>bilibili</option>
+                  <option value="微博" ${it.platform==='微博'?'selected':''}>微博</option>
+                  <option value="微信" ${it.platform==='微信'?'selected':''}>微信</option>
+                  <option value="其他" ${it.platform==='其他'?'selected':''}>其他</option>
+                </select>
+              </div>
+              <input type="date" class="input-date" value="${it.ddl||''}" data-rq-ddl="${i}" style="flex-shrink:0;">
             </div>
+            ${it.platform==='其他'?`<div class="field" style="margin-bottom:6px;"><input type="text" class="input" value="${Utils.esc(it.platformOther||'')}" data-rq-platform-other="${i}" placeholder="平台名称"></div>`:''}
             ${it.starred&&it.completedDate?`<div style="font-size:12px;color:var(--primary-pink);">✅ 完成于 ${it.completedDate}</div>`:''}
           </div>
         `).join(''):'<div class="empty-state"><span class="emoji">📚</span>还没有待阅内容~</div>'}
@@ -1664,29 +1824,43 @@ function renderInspiration(){
     <div class="card">
       <div class="card-title"><span class="emoji">💡</span>灵感一瞬</div>
       <div id="ins-list">
-        ${ins.items.length?ins.items.map((it,i)=>`
+        ${ins.items.length?ins.items.map((it,i)=>{
+          const startDate=it.startDate||'';
+          const realDate=it.realizeDate||'';
+          const autoDays=(startDate&&realDate)?Utils.daysBetween(startDate,realDate):'';
+          return `
           <div class="list-item-card">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
               <span style="font-size:16px;">💡</span>
               <span style="flex:1;font-weight:600;">${Utils.esc(it.text)}</span>
-              <button class="del-time" data-ins-del="${i}" style="font-size:16px;">✕</button>
+              <button class="del-time" data-ins-del="${i}" style="font-size:16px;flex-shrink:0;">✕</button>
             </div>
             <div class="detail-panel">
-              <div class="field" style="margin-bottom:6px;">
-                <input type="date" class="input" value="${it.realizeDate||''}" data-ins-real="${i}" placeholder="实现日期">
-                <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">🌟 实现日期</div>
+              <div class="field-row" style="margin-bottom:6px;gap:8px;">
+                <div style="flex:1;min-width:0;">
+                  <input type="date" class="input-date" value="${startDate}" data-ins-start="${i}" style="width:100%;">
+                  <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">📅 想法日期</div>
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <input type="date" class="input-date" value="${realDate}" data-ins-real="${i}" style="width:100%;">
+                  <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">🌟 落成时间</div>
+                </div>
               </div>
               <div class="field" style="margin-bottom:6px;">
-                <input type="text" class="input" value="${Utils.esc(it.durationToRealize||'')}" data-ins-dur="${i}" placeholder="经历多久">
-                <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">⏱️ 经历多久</div>
+                <input type="text" class="input" value="自动统计：${autoDays}" disabled style="background:var(--bg-pink);color:var(--primary-pink);font-weight:600;">
+                <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">⏱️ 花费时间（自动）</div>
+              </div>
+              <div class="field" style="margin-bottom:6px;">
+                <textarea class="textarea" data-ins-review="${i}" placeholder="时长复盘" style="min-height:60px;">${Utils.esc(it.review||'')}</textarea>
               </div>
               <div class="field">
                 <input type="range" min="0" max="100" value="${it.selfRating||0}" data-ins-rate="${i}" style="width:100%;" oninput="this.nextElementSibling.textContent=this.value+'%'">
                 <span style="color:var(--primary-pink);font-weight:600;">${it.selfRating||0}%</span>
+                <div style="font-size:11px;color:var(--text-sub);">📊 完成度自评</div>
               </div>
             </div>
           </div>
-        `).join(''):'<div class="empty-state"><span class="emoji">💭</span>还没有灵感~ 记录一个吧</div>'}
+        `}).join(''):'<div class="empty-state"><span class="emoji">💭</span>还没有灵感~ 记录一个吧</div>'}
       </div>
     </div>
     <div class="card">
@@ -1729,8 +1903,19 @@ function renderReflection(){
       <div id="rf-list">
         ${rf.items.length?rf.items.map((it,i)=>`
           <div class="list-item-card">
-            <textarea class="textarea" data-rf-text="${i}" placeholder="今天想说什么">${Utils.esc(it.text)}</textarea>
-            <button class="del-time" data-rf-del="${i}" style="margin-top:6px;font-size:14px;">删除</button>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <input type="datetime-local" class="input-time" value="${it.time||''}" data-rf-time="${i}" style="max-width:200px;font-size:12px;">
+              <span style="font-size:11px;color:var(--text-sub);">📝 记录时间</span>
+            </div>
+            <div class="rf-text-wrap" data-rf-idx="${i}">
+              <div class="rf-text-preview">${Utils.esc(it.text).substring(0,200)}${it.text.length>200?'...':''}</div>
+              ${it.text.length>200?`<button class="btn btn-sm btn-outline rf-full-btn" data-rf-full="${i}" style="margin-top:4px;font-size:12px;">📖 全文阅读</button>`:''}
+            </div>
+            <textarea class="textarea rf-edit-area" data-rf-text="${i}" placeholder="今天想说什么" style="display:none;min-height:180px;">${Utils.esc(it.text)}</textarea>
+            <div style="display:flex;gap:6px;margin-top:6px;">
+              <button class="btn btn-sm btn-outline" data-rf-edit="${i}" style="font-size:13px;">✏️ 编辑</button>
+              <button class="del-time" data-rf-del="${i}" style="font-size:14px;">删除</button>
+            </div>
           </div>
         `).join(''):'<div class="empty-state"><span class="emoji">✍️</span>今天还没有碎碎念~</div>'}
       </div>
@@ -1738,7 +1923,10 @@ function renderReflection(){
     <div class="card">
       <div class="card-title"><span class="emoji">➕</span>添加碎碎念</div>
       <div class="field" style="margin-bottom:8px;">
-        <textarea class="textarea" id="rf-new" placeholder="写点什么..."></textarea>
+        <input type="datetime-local" class="input-time" id="rf-new-time" style="max-width:200px;margin-bottom:6px;font-size:12px;">
+      </div>
+      <div class="field" style="margin-bottom:8px;">
+        <textarea class="textarea" id="rf-new" placeholder="写点什么" style="min-height:120px;"></textarea>
       </div>
       <button class="btn" style="width:100%;" onclick="addReflection('${d}')">添加</button>
     </div>
@@ -1746,14 +1934,27 @@ function renderReflection(){
 }
 function addReflection(d){
   const el=document.getElementById('rf-new');
+  const timeEl=document.getElementById('rf-new-time');
   const text=el?el.value.trim():'';
   if(!text){ Utils.toast('请输入内容'); return; }
+  const time=timeEl?timeEl.value:'';
   const day=Store.getDay(d);
-  day.reflection.items.push({id:Utils.uid(),text});
+  day.reflection.items.push({id:Utils.uid(),text,time});
   Store.saveDayModule(d,'reflection',day.reflection);
   State.render();
 }
 function saveReflection(d){ Utils.toast('已保存~ 📝'); }
+function showRfFullModal(text){
+  let m=document.getElementById('rf-full-modal');
+  if(!m){
+    m=document.createElement('div');
+    m.id='rf-full-modal'; m.className='rf-full-modal';
+    document.body.appendChild(m);
+  }
+  m.innerHTML=`<div class="rf-full-content"><div style="font-weight:700;color:var(--primary-pink);margin-bottom:10px;">📖 全文</div>${Utils.esc(text)}<div style="text-align:center;margin-top:16px;"><button class="btn btn-sm" onclick="document.getElementById('rf-full-modal').classList.remove('show')">关闭</button></div></div>`;
+  m.classList.add('show');
+  m.onclick=(e)=>{ if(e.target===m) m.classList.remove('show'); };
+}
 
 /* ============================================================
    周月年计划（通用）
@@ -1784,21 +1985,27 @@ function renderPlanPage(type,label,emoji,range){
               <button class="del-time" data-plan-del="${p.id}" style="font-size:16px;">✕</button>
             </div>
             <div class="detail-panel">
-              <div class="field" style="margin-bottom:6px;">
-                <input type="date" class="input" value="${p.planDate||''}" data-plan-date="${p.id}">
-                <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">📅 计划时间</div>
+              <div class="field-row" style="margin-bottom:6px;gap:8px;">
+                <div style="flex:1;min-width:0;">
+                  <input type="date" class="input-date" value="${p.planDate||''}" data-plan-date="${p.id}" style="width:100%;">
+                  <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">📅 计划时间</div>
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <input type="date" class="input-date" value="${p.realizeDate||''}" data-plan-real="${p.id}" style="width:100%;">
+                  <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">🌟 实现日期</div>
+                </div>
               </div>
               <div class="field" style="margin-bottom:6px;">
-                <input type="date" class="input" value="${p.realizeDate||''}" data-plan-real="${p.id}">
-                <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">🌟 实现日期</div>
+                <input type="text" class="input" value="${p.durationToRealize?('自动统计：'+p.durationToRealize):'自动统计'}" disabled style="background:var(--bg-pink);color:var(--primary-pink);font-weight:600;">
+                <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">⏱️ 花费时间（自动）</div>
               </div>
               <div class="field" style="margin-bottom:6px;">
-                <input type="text" class="input" value="${Utils.esc(p.durationToRealize||'')}" data-plan-dur="${p.id}" placeholder="自动计算" readonly>
-                <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">⏱️ 经历多久</div>
+                <textarea class="textarea" data-plan-review="${p.id}" placeholder="时长复盘" style="min-height:60px;">${Utils.esc(p.review||'')}</textarea>
               </div>
               <div class="field">
                 <input type="range" min="0" max="100" value="${p.selfRating||0}" data-plan-rate="${p.id}" style="width:100%;" oninput="this.parentElement.querySelector('.rate-val').textContent=this.value+'%'">
                 <span class="rate-val" style="color:var(--primary-pink);font-weight:600;">${p.selfRating||0}%</span>
+                <div style="font-size:11px;color:var(--text-sub);">📊 当前进度</div>
               </div>
             </div>
           </div>
@@ -2039,7 +2246,11 @@ function init(){
       const day=Store.getDay(d);
       const item=day.readingQueue.items[i];
       item.starred=!item.starred;
-      item.completedDate=item.starred?d:null;
+      if(item.starred){
+        const now=new Date();
+        const pad=n=>String(n).padStart(2,'0');
+        item.completedDate=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      }else{ item.completedDate=null; }
       Store.saveDayModule(d,'readingQueue',day.readingQueue);
       State.render();
       return;
@@ -2070,6 +2281,33 @@ function init(){
       return;
     }
 
+    // 复盘碎碎念：全文阅读
+    const rfFull=e.target.closest('[data-rf-full]');
+    if(rfFull){
+      const i=parseInt(rfFull.dataset.rfFull);
+      const day=Store.getDay(d);
+      const text=day.reflection.items[i]?.text||'';
+      showRfFullModal(text);
+      return;
+    }
+    // 复盘碎碎念：编辑切换
+    const rfEdit=e.target.closest('[data-rf-edit]');
+    if(rfEdit){
+      const i=parseInt(rfEdit.dataset.rfEdit);
+      const card=rfEdit.closest('.list-item-card');
+      const preview=card.querySelector('.rf-text-preview');
+      const area=card.querySelector('.rf-edit-area');
+      if(area.style.display==='none'){
+        area.style.display='block'; preview.style.display='none';
+        rfEdit.textContent='✅ 完成';
+      }else{
+        const day=Store.getDay(d);
+        day.reflection.items[i].text=area.value;
+        Store.saveDayModule(d,'reflection',day.reflection);
+        State.render();
+      }
+      return;
+    }
     // 复盘碎碎念：删除
     const rfDel=e.target.closest('[data-rf-del]');
     if(rfDel){
@@ -2112,7 +2350,7 @@ function init(){
       return;
     }
 
-    // 排队待阅 URL/DDD
+    // 排队待阅 URL/DDD/平台
     if(t.dataset.rqUrl!==undefined){
       const i=parseInt(t.dataset.rqUrl);
       const day=Store.getDay(d);
@@ -2127,9 +2365,24 @@ function init(){
       Store.saveDayModule(d,'readingQueue',day.readingQueue);
       return;
     }
+    if(t.dataset.rqPlatform!==undefined){
+      const i=parseInt(t.dataset.rqPlatform);
+      const day=Store.getDay(d);
+      day.readingQueue.items[i].platform=t.value;
+      Store.saveDayModule(d,'readingQueue',day.readingQueue);
+      State.render();
+      return;
+    }
+    if(t.dataset.rqPlatformOther!==undefined){
+      const i=parseInt(t.dataset.rqPlatformOther);
+      const day=Store.getDay(d);
+      day.readingQueue.items[i].platformOther=t.value;
+      Store.saveDayModule(d,'readingQueue',day.readingQueue);
+      return;
+    }
 
     // 周月年计划输入框
-    if(t.dataset.planDate||t.dataset.planReal||t.dataset.planRate){
+    if(t.dataset.planDate||t.dataset.planReal||t.dataset.planRate||t.dataset.planReview!==undefined){
       const type={weekly:'weekly',monthly:'monthly',yearly:'yearly'}[State.route.replace('#','')];
       if(type){
         const arr=Store.getPlans(type);
@@ -2143,9 +2396,11 @@ function init(){
             const realDate=q(card,'[data-plan-real]').value;
             arr[idx].planDate=planDate;
             arr[idx].realizeDate=realDate;
-            arr[idx].durationToRealize=realDate?Utils.daysBetween(planDate,realDate):'';
+            arr[idx].durationToRealize=(planDate&&realDate)?Utils.daysBetween(planDate,realDate):'';
+            arr[idx].review=q(card,'[data-plan-review]')?.value||'';
             arr[idx].selfRating=Number(q(card,'[data-plan-rate]').value)||0;
             Store.savePlans(type,arr);
+            if(t.dataset.planDate||t.dataset.planReal) State.render();
           }
         }
       }
@@ -2153,7 +2408,7 @@ function init(){
     }
 
     // 灵感一瞬输入框
-    if(t.dataset.insReal!==undefined||t.dataset.insDur!==undefined||t.dataset.insRate!==undefined){
+    if(t.dataset.insReal!==undefined||t.dataset.insStart!==undefined||t.dataset.insRate!==undefined||t.dataset.insReview!==undefined){
       const card=t.closest('.list-item-card');
       if(card){
         const cards=document.querySelectorAll('#ins-list .list-item-card');
@@ -2161,11 +2416,13 @@ function init(){
         const day=Store.getDay(d);
         const old=day.inspiration.items[i];
         if(old){
-          const realDate=q(card,'[data-ins-real]').value;
-          old.realizeDate=realDate;
-          old.durationToRealize=realDate?Utils.daysBetween(d,realDate):'';
+          old.startDate=q(card,'[data-ins-start]')?.value||'';
+          old.realizeDate=q(card,'[data-ins-real]').value;
+          old.durationToRealize=(old.startDate&&old.realizeDate)?Utils.daysBetween(old.startDate,old.realizeDate):'';
+          old.review=q(card,'[data-ins-review]')?.value||'';
           old.selfRating=Number(q(card,'[data-ins-rate]').value)||0;
           Store.saveDayModule(d,'inspiration',day.inspiration);
+          if(t.dataset.insReal!==undefined||t.dataset.insStart!==undefined) State.render();
         }
       }
       return;
@@ -2177,6 +2434,16 @@ function init(){
       const day=Store.getDay(d);
       if(day.reflection.items[i]){
         day.reflection.items[i].text=t.value;
+        Store.saveDayModule(d,'reflection',day.reflection);
+      }
+      return;
+    }
+    // 复盘碎碎念时间
+    if(t.dataset.rfTime!==undefined){
+      const i=parseInt(t.dataset.rfTime);
+      const day=Store.getDay(d);
+      if(day.reflection.items[i]){
+        day.reflection.items[i].time=t.value;
         Store.saveDayModule(d,'reflection',day.reflection);
       }
       return;
