@@ -2,6 +2,20 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<script>
+/* ========== 版本号强制刷新：解决 iPhone 主屏/Safari 缓存问题 ========== */
+(function(){
+  const APP_VERSION='20260805-3';
+  try{
+    const url=new URL(location.href);
+    const current=url.searchParams.get('v');
+    if(current!==APP_VERSION){
+      url.searchParams.set('v',APP_VERSION);
+      location.replace(url.toString());
+    }
+  }catch(e){}
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -498,6 +512,28 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;}
 .input-time{max-width:100%;}
 .input-time::-webkit-calendar-picker-indicator{opacity:0.5;}
 
+/* 自定义日期/时间占位符：统一显示英文格式，覆盖 iOS 原生中文 */
+.date-input-wrap,.datetime-input-wrap{position:relative;display:block;width:100%;}
+.date-input-wrap input,.datetime-input-wrap input{width:100%;background:transparent;position:relative;z-index:1;}
+.date-input-wrap input:not([value]) + .date-placeholder,
+.date-input-wrap input[value=""] + .date-placeholder,
+.datetime-input-wrap input:not([value]) + .datetime-placeholder,
+.datetime-input-wrap input[value=""] + .datetime-placeholder,
+.date-input-wrap input.empty + .date-placeholder,
+.datetime-input-wrap input.empty + .datetime-placeholder{
+  display:flex;
+}
+.date-placeholder,.datetime-placeholder{
+  position:absolute;left:34px;top:50%;transform:translateY(-50%);
+  color:#D4B5BA;font-size:13px;pointer-events:none;z-index:2;
+  display:none;align-items:center;gap:4px;
+  font-family:-apple-system,"PingFang SC","Noto Sans SC","Helvetica Neue",sans-serif;
+}
+.date-input-wrap input.empty,.datetime-input-wrap input.empty{color:transparent;}
+.date-input-wrap input:not(.empty),.datetime-input-wrap input:not(.empty){color:var(--text-main);}
+.input-date:invalid + .date-placeholder{display:flex;}
+.input-time:invalid + .datetime-placeholder{display:flex;}
+
 /* 月份统计条目 */
 .month-row{
   background:var(--bg-pink);
@@ -667,8 +703,16 @@ const Store = {
       if(day && day.bodyMind && day.bodyMind.sleep){
         const s = day.bodyMind.sleep;
         const nightRecs = (s.records||[]).map(r=>(Object.assign({}, r, { type:'night' })));
+        // 兼容 v2 早期 nap.records 数组 → 取第一条作为 nap 单条数据
+        let napBed='', napWake='', napQuality=0;
+        const oldNapRecords = (s.nap && s.nap.records) || [];
+        if(oldNapRecords.length){
+          napBed = oldNapRecords[0].bedTime || '';
+          napWake = oldNapRecords[0].wakeTime || '';
+          napQuality = oldNapRecords[0].quality || 0;
+        }
         day.bodyMind.sleep = {
-          nap:{ records:[] },
+          nap:{ bedTime: napBed, wakeTime: napWake, quality: napQuality },
           nightSleep:{
             bedTime: s.bedTime||'',
             wakeTime: s.wakeTime||'',
@@ -713,9 +757,18 @@ const Store = {
     const day=data.byDate[dateStr];
     const tpl=this._newDayData();
     for(const k in tpl){ if(!(k in day)) day[k]=tpl[k]; }
-    // 补全睡眠新结构
-    if(!day.bodyMind.sleep.nap) day.bodyMind.sleep.nap={ records:[] };
+    // 补全睡眠新结构（v2 单条午睡）
+    if(!day.bodyMind.sleep.nap) day.bodyMind.sleep.nap={ bedTime:'', wakeTime:'', quality:0 };
     if(!day.bodyMind.sleep.nightSleep) day.bodyMind.sleep.nightSleep={ bedTime:'', wakeTime:'', quality:0, dreamt:false, records:[] };
+    // 兼容旧 nap.records 结构
+    if(day.bodyMind.sleep.nap.records && !day.bodyMind.sleep.nap.bedTime && !day.bodyMind.sleep.nap.wakeTime){
+      const recs=day.bodyMind.sleep.nap.records;
+      if(recs && recs.length){
+        day.bodyMind.sleep.nap={ bedTime:recs[0].bedTime||'', wakeTime:recs[0].wakeTime||'', quality:recs[0].quality||0 };
+      }else{
+        day.bodyMind.sleep.nap={ bedTime:'', wakeTime:'', quality:0 };
+      }
+    }
     if(!day.bodyMind.drink.items) day.bodyMind.drink.items=[];
     return day;
   },
@@ -731,7 +784,7 @@ const Store = {
       wishlist:{ items:[] },
       bodyMind:{
         sleep:{
-          nap:{ records:[] },
+          nap:{ bedTime:'', wakeTime:'', quality:0 },
           nightSleep:{ bedTime:'', wakeTime:'', quality:0, dreamt:false, records:[] }
         },
         diet:{ breakfast:'', lunch:'', dinner:'', snack:'', fruit:'' },
@@ -779,6 +832,7 @@ const Store = {
     if(d.bodyMind){
       const b=d.bodyMind;
       if((b.sleep.nightSleep.bedTime)||(b.sleep.nightSleep.wakeTime)||(b.sleep.nightSleep.quality)) return true;
+      if((b.sleep.nap.bedTime)||(b.sleep.nap.wakeTime)||(b.sleep.nap.quality)) return true;
       if(b.sleep.nap.records && b.sleep.nap.records.length) return true;
       if(b.sleep.nightSleep.records && b.sleep.nightSleep.records.length) return true;
       if(b.diet.breakfast||b.diet.lunch||b.diet.dinner||b.diet.snack||b.diet.fruit) return true;
@@ -1195,8 +1249,8 @@ function renderHomeBodyMindOverview(d,bm){
   if(ns.bedTime||ns.wakeTime||ns.quality){
     items.push({emoji:'🌙',label:'夜间',val:ns.quality?('⭐'.repeat(ns.quality)):(ns.bedTime+'~'+ns.wakeTime)});
   }
-  if(nap.records && nap.records.length){
-    items.push({emoji:'😴',label:'午睡',val:nap.records.length+'次'});
+  if(nap.bedTime||nap.wakeTime||nap.quality){
+    items.push({emoji:'😴',label:'午睡',val:nap.quality?('⭐'.repeat(nap.quality)):(nap.bedTime+'~'+nap.wakeTime)});
   }
   if(bm.diet.breakfast||bm.diet.lunch||bm.diet.dinner||bm.diet.snack||bm.diet.fruit) items.push({emoji:'🍱',label:'饮食',val:'已记录'});
   if((bm.drink.items && bm.drink.items.length)||bm.drink.takeoutTea||bm.drink.takeoutCoffee||bm.drink.diy||bm.drink.detail) items.push({emoji:'☕',label:'茶饮',val:(bm.drink.items?bm.drink.items.length:0)+'条'});
@@ -1551,7 +1605,7 @@ function renderBodyMindSub(sub){
 
   if(sub.id==='sleep'){
     const ns = bm.nightSleep || {bedTime:'',wakeTime:'',quality:0,dreamt:false,records:[]};
-    const nap = bm.nap || {records:[]};
+    const nap = bm.nap || {bedTime:'',wakeTime:'',quality:0};
     vc.innerHTML+=`
       <div class="card">
         <div class="card-title"><span class="emoji">😴</span>今日睡眠</div>
@@ -1561,24 +1615,22 @@ function renderBodyMindSub(sub){
           <!-- 午睡 -->
           <div style="background:var(--bg-pink);border-radius:12px;padding:10px;">
             <div style="font-size:13px;font-weight:700;color:var(--primary-pink);margin-bottom:6px;">☀️ 午睡</div>
-            <div id="nap-list">
-              ${(nap.records||[]).map((r,i)=>`
-                <div class="list-item-card" style="padding:8px;margin-bottom:6px;border-left-width:2px;">
-                  <div class="field-row" style="gap:4px;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:0;">
-                      <div style="font-size:11px;color:var(--text-sub);">入睡</div>
-                      <input type="time" class="input-time" value="${r.bedTime||''}" data-nap-bed="${i}" placeholder="入睡时间" style="width:100%;">
-                    </div>
-                    <div style="flex:1;min-width:0;">
-                      <div style="font-size:11px;color:var(--text-sub);">醒来</div>
-                      <input type="time" class="input-time" value="${r.wakeTime||''}" data-nap-wake="${i}" placeholder="醒来时间" style="width:100%;">
-                    </div>
-                    <button class="del-time" data-nap-del="${i}" style="font-size:14px;flex-shrink:0;">✕</button>
-                  </div>
-                </div>
-              `).join('')}
+            <div class="field-row" style="margin-bottom:6px;gap:6px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;color:var(--text-sub);">入睡</div>
+                <input type="time" class="input-time" id="nap-bed" value="${nap.bedTime||''}" placeholder="入睡时间" style="width:100%;">
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;color:var(--text-sub);">醒来</div>
+                <input type="time" class="input-time" id="nap-wake" value="${nap.wakeTime||''}" placeholder="醒来时间" style="width:100%;">
+              </div>
             </div>
-            <button class="btn btn-sm btn-outline" style="width:100%;margin-top:6px;" data-add-nap>➕ 添加午睡</button>
+            <div class="field" style="margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--text-sub);margin-bottom:3px;">睡眠质量</div>
+              <div style="display:flex;gap:4px;">
+                ${[1,2,3].map(n=>`<button class="btn btn-sm ${nap.quality===n?'':'btn-outline'}" data-nap-q="${n}" style="flex:1;font-size:12px;padding:5px 4px;">${'⭐'.repeat(n)}</button>`).join('')}
+              </div>
+            </div>
           </div>
           <!-- 夜间睡眠 -->
           <div style="background:var(--bg-pink);border-radius:12px;padding:10px;">
@@ -1807,7 +1859,10 @@ function renderBodyMindSub(sub){
           ${bm.records.length?bm.records.map((r,i)=>`
             <div class="list-item-card" style="margin-bottom:8px;">
               <div class="field-row" style="margin-bottom:6px;gap:6px;">
-                <input type="date" class="input-date" value="${r.date||''}" data-med-date="${i}" placeholder="记录日期" style="flex:1 1 130px;">
+                <div class="date-input-wrap" style="flex:1 1 130px;">
+                  <input type="date" class="input-date empty" value="${r.date||''}" data-med-date="${i}" placeholder="记录日期" style="width:100%;">
+                  <span class="date-placeholder">yyyy-mm-dd</span>
+                </div>
                 <input type="text" class="input" value="${Utils.esc(r.diagnosis)}" data-med-diag="${i}" placeholder="确诊疾病" style="flex:2 1 140px;min-width:0;">
                 <button class="del-time" data-med-del="${i}" style="font-size:16px;flex-shrink:0;">✕</button>
               </div>
@@ -1858,23 +1913,14 @@ function renderBodyMindSub(sub){
       State.render();
       return;
     }
-    // 午睡：删除
-    const napDel=e.target.closest('[data-nap-del]');
-    if(napDel){
+    // 午睡：质量选择
+    const napQ=e.target.closest('[data-nap-q]');
+    if(napQ){
       const day=Store.getDay(d);
-      day.bodyMind.sleep.nap.records.splice(parseInt(napDel.dataset.napDel),1);
-      Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render();
-      return;
-    }
-    // 午睡：添加
-    const addNap=e.target.closest('[data-add-nap]');
-    if(addNap){
-      const day=Store.getDay(d);
-      if(!day.bodyMind.sleep.nap) day.bodyMind.sleep.nap={records:[]};
-      if(!day.bodyMind.sleep.nap.records) day.bodyMind.sleep.nap.records=[];
-      day.bodyMind.sleep.nap.records.push({bedTime:'',wakeTime:'',addedAt:d});
-      Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render();
-      return;
+      const cur = day.bodyMind.sleep.nap.quality;
+      const n = parseInt(napQ.dataset.napQ);
+      day.bodyMind.sleep.nap.quality = (cur===n) ? 0 : n;
+      Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render(); return;
     }
     // 茶饮：删除
     const drinkDel=e.target.closest('[data-drink-del]');
@@ -1890,17 +1936,15 @@ function renderBodyMindSub(sub){
   // 睡眠/茶饮字段 change 监听（保存午睡、修改饮用量等）
   vc.addEventListener('change',(e)=>{
     const t=e.target;
-    if(t.dataset.napBed!==undefined){
-      const i=parseInt(t.dataset.napBed);
+    if(t.id==='nap-bed'){
       const day=Store.getDay(d);
-      day.bodyMind.sleep.nap.records[i].bedTime=t.value;
+      day.bodyMind.sleep.nap.bedTime=t.value;
       Store.saveDayModule(d,'bodyMind',day.bodyMind);
       return;
     }
-    if(t.dataset.napWake!==undefined){
-      const i=parseInt(t.dataset.napWake);
+    if(t.id==='nap-wake'){
       const day=Store.getDay(d);
-      day.bodyMind.sleep.nap.records[i].wakeTime=t.value;
+      day.bodyMind.sleep.nap.wakeTime=t.value;
       Store.saveDayModule(d,'bodyMind',day.bodyMind);
       return;
     }
@@ -1928,54 +1972,66 @@ function renderBodyMindSub(sub){
   });
 }
 
-// 睡眠：按月分组渲染（午睡/夜间睡眠 区分）
+// 睡眠：按月分组渲染（午睡/夜间睡眠 详细数据）
 function renderSleepMonthGrouped(month, currentDate){
   const data=Store._read().byDate;
-  // 收集所有月份内睡眠记录（包含历史records和当前日数据）
   const napByDate={};
   const nightByDate={};
-  const todayNS = data[currentDate]?.bodyMind?.sleep?.nightSleep || {};
-  if(todayNS.bedTime || todayNS.wakeTime || todayNS.quality){
-    nightByDate[currentDate]=[{bedTime:todayNS.bedTime,wakeTime:todayNS.wakeTime,quality:todayNS.quality,dreamt:todayNS.dreamt,fromCurrent:true}];
-  }
-  const todayNap = (data[currentDate]?.bodyMind?.sleep?.nap?.records)||[];
-  if(todayNap.length){
-    napByDate[currentDate] = todayNap;
-  }
+
   Object.keys(data).forEach(ds=>{
-    if(ds===currentDate) return;
     if(!ds.startsWith(month)) return;
     const s=data[ds]?.bodyMind?.sleep;
     if(!s) return;
+    // 夜间睡眠：当前记录
     const ns=s.nightSleep||{};
-    if(ns.records && ns.records.length){
-      nightByDate[ds]=(nightByDate[ds]||[]).concat(ns.records.map(r=>Object.assign({},r)));
-    }
     if(ns.bedTime || ns.wakeTime || ns.quality){
-      nightByDate[ds]=(nightByDate[ds]||[]).concat([{bedTime:ns.bedTime,wakeTime:ns.wakeTime,quality:ns.quality,dreamt:ns.dreamt,fromCurrent:false}]);
+      nightByDate[ds]={bedTime:ns.bedTime,wakeTime:ns.wakeTime,quality:ns.quality,dreamt:ns.dreamt,fromCurrent:true};
     }
-    if(s.nap && s.nap.records && s.nap.records.length){
-      napByDate[ds]=(napByDate[ds]||[]).concat(s.nap.records);
+    // 夜间睡眠：历史 records
+    (ns.records||[]).forEach((r,i)=>{
+      // 历史记录没有 date 字段时，用 record 自身时间或归属日期
+      const rds = r.date || ds;
+      if(!nightByDate[rds]){
+        nightByDate[rds]={bedTime:r.bedTime,wakeTime:r.wakeTime,quality:r.quality,dreamt:r.dreamt,fromCurrent:false};
+      }
+    });
+    // 午睡：单条结构
+    const nap=s.nap||{};
+    if(nap.bedTime || nap.wakeTime || nap.quality){
+      napByDate[ds]={bedTime:nap.bedTime,wakeTime:nap.wakeTime,quality:nap.quality};
+    }
+    // 兼容旧 nap.records
+    if(nap.records && nap.records.length && !napByDate[ds]){
+      napByDate[ds]={bedTime:nap.records[0].bedTime||'',wakeTime:nap.records[0].wakeTime||'',quality:nap.records[0].quality||0};
     }
   });
+
   const allDates = Array.from(new Set([...Object.keys(napByDate),...Object.keys(nightByDate)])).sort().reverse();
   if(!allDates.length){
     return '<div class="empty-state" style="padding:14px;"><span class="emoji">📋</span>本月暂无睡眠记录</div>';
   }
   const isOpen = (ds)=> !!State.collapse.sleepMonthOpen[ds];
   return allDates.map(ds=>{
-    const naps = napByDate[ds]||[];
-    const nights = nightByDate[ds]||[];
+    const nap = napByDate[ds];
+    const night = nightByDate[ds];
     const open = isOpen(ds);
     return `
       <div class="month-row ${open?'open':''}" data-sleep-month-row="${ds}">
         <div class="month-head">
           <span>${ds.slice(5)}（${Utils.weekdayCN(ds)}）</span>
-          <span class="count">午睡 ${naps.length} · 夜间 ${nights.length}</span>
+          <span class="count">${nap?'午睡':'无午睡'} · ${night?'夜间':'无夜间'}</span>
         </div>
         <div class="month-detail">
-          ${nights.length?`<div style="margin-bottom:6px;"><b style="color:var(--primary-pink);">🌙 夜间睡眠</b>${nights.map(r=>`<div style="font-size:12px;padding:3px 6px;background:#fff;border-radius:8px;margin-top:3px;">${r.bedTime||'--'}~${r.wakeTime||'--'} ${r.quality?('⭐'.repeat(r.quality)):''} ${r.dreamt?'💭':''}</div>`).join('')}</div>`:''}
-          ${naps.length?`<div><b style="color:var(--sunflower);">☀️ 午睡</b>${naps.map(r=>`<div style="font-size:12px;padding:3px 6px;background:#fff;border-radius:8px;margin-top:3px;">${r.bedTime||'--'}~${r.wakeTime||'--'}</div>`).join('')}</div>`:''}
+          ${night?`<div style="margin-bottom:8px;padding:8px;background:#fff;border-radius:10px;">
+            <div style="font-weight:700;color:var(--primary-pink);margin-bottom:4px;">🌙 夜间睡眠</div>
+            <div style="font-size:13px;">${night.bedTime||'--'} ~ ${night.wakeTime||'--'}</div>
+            <div style="font-size:12px;color:var(--text-sub);">${night.quality?('⭐'.repeat(night.quality)+' 睡眠质量'):'未评分'} ${night.dreamt?'💭 做梦':''}</div>
+          </div>`:''}
+          ${nap?`<div style="padding:8px;background:#fff;border-radius:10px;">
+            <div style="font-weight:700;color:var(--sunflower);margin-bottom:4px;">☀️ 午睡</div>
+            <div style="font-size:13px;">${nap.bedTime||'--'} ~ ${nap.wakeTime||'--'}</div>
+            <div style="font-size:12px;color:var(--text-sub);">${nap.quality?('⭐'.repeat(nap.quality)+' 睡眠质量'):'未评分'}</div>
+          </div>`:''}
         </div>
       </div>
     `;
@@ -1991,10 +2047,11 @@ function saveSleep(d){
   nightSleep.wakeTime=val('sleep-wake');
   nightSleep.dreamt=document.getElementById('sleep-dream').checked;
   // quality 由按钮事件控制
-  day.bodyMind.sleep={
-    nap: old.nap || {records:[]},
-    nightSleep
-  };
+  const nap = Object.assign({}, old.nap||{});
+  nap.bedTime=val('nap-bed');
+  nap.wakeTime=val('nap-wake');
+  // nap quality 也由按钮事件控制
+  day.bodyMind.sleep={ nap, nightSleep };
   Store.saveDayModule(d,'bodyMind',day.bodyMind);
   Utils.toast('已保存~ 💤');
 }
@@ -2249,7 +2306,10 @@ function renderReadingQueue(){
                   <option value="其他" ${it.platform==='其他'?'selected':''}>其他</option>
                 </select>
               </div>
-              <input type="date" class="input-date" value="${it.ddl||''}" data-rq-ddl="${i}" placeholder="DDL" style="flex:1;max-width:160px;">
+              <div class="date-input-wrap" style="flex:1;max-width:160px;">
+                <input type="date" class="input-date empty" value="${it.ddl||''}" data-rq-ddl="${i}" placeholder="DDL" style="width:100%;">
+                <span class="date-placeholder">yyyy-mm-dd</span>
+              </div>
             </div>
             ${it.platform==='其他'?`<div class="field" style="margin-bottom:6px;"><input type="text" class="input" value="${Utils.esc(it.platformOther||'')}" data-rq-platform-other="${i}" placeholder="平台名称"></div>`:''}
             ${it.starred&&it.completedDate?`<div style="font-size:12px;color:var(--primary-pink);">✅ 完成于 ${it.completedDate}</div>`:''}
@@ -2305,13 +2365,13 @@ function renderInspiration(){
             </div>
             <div class="detail-panel">
               <div class="field-row" style="margin-bottom:6px;gap:8px;">
-                <div style="flex:1;min-width:0;">
-                  <input type="date" class="input-date" value="${startDate}" data-ins-start="${i}" placeholder="想法日期" style="width:100%;">
-                  <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">📅 想法日期</div>
+                <div class="date-input-wrap" style="flex:1;min-width:0;">
+                  <input type="date" class="input-date empty" value="${startDate}" data-ins-start="${i}" placeholder="想法日期" style="width:100%;">
+                  <span class="date-placeholder">yyyy-mm-dd</span>
                 </div>
-                <div style="flex:1;min-width:0;">
-                  <input type="date" class="input-date" value="${realDate}" data-ins-real="${i}" placeholder="落成时间" style="width:100%;">
-                  <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">🌟 落成时间</div>
+                <div class="date-input-wrap" style="flex:1;min-width:0;">
+                  <input type="date" class="input-date empty" value="${realDate}" data-ins-real="${i}" placeholder="落成时间" style="width:100%;">
+                  <span class="date-placeholder">yyyy-mm-dd</span>
                 </div>
               </div>
               <div class="field" style="margin-bottom:6px;">
@@ -2372,7 +2432,10 @@ function renderReflection(){
         ${rf.items.length?rf.items.map((it,i)=>`
           <div class="list-item-card">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-              <input type="datetime-local" class="input-time" value="${it.time||''}" data-rf-time="${i}" placeholder="记录时间" style="max-width:200px;font-size:12px;">
+              <div class="datetime-input-wrap" style="max-width:200px;font-size:12px;">
+                <input type="datetime-local" class="input-time empty" value="${it.time||''}" data-rf-time="${i}" placeholder="记录时间" style="width:100%;">
+                <span class="datetime-placeholder">yyyy-mm-dd --:--</span>
+              </div>
               <span style="font-size:11px;color:var(--text-sub);">📝 记录时间</span>
             </div>
             <div class="rf-text-wrap" data-rf-idx="${i}">
@@ -2391,7 +2454,10 @@ function renderReflection(){
     <div class="card">
       <div class="card-title"><span class="emoji">➕</span>添加碎碎念</div>
       <div class="field" style="margin-bottom:8px;">
-        <input type="datetime-local" class="input-time" id="rf-new-time" placeholder="记录时间" style="max-width:200px;margin-bottom:6px;font-size:12px;">
+        <div class="datetime-input-wrap" style="max-width:200px;margin-bottom:6px;font-size:12px;">
+          <input type="datetime-local" class="input-time empty" id="rf-new-time" placeholder="记录时间" style="width:100%;">
+          <span class="datetime-placeholder">yyyy-mm-dd --:--</span>
+        </div>
       </div>
       <div class="field" style="margin-bottom:8px;">
         <textarea class="textarea" id="rf-new" placeholder="写点什么" style="min-height:120px;"></textarea>
@@ -2454,13 +2520,13 @@ function renderPlanPage(type,label,emoji,range){
             </div>
             <div class="detail-panel">
               <div class="field-row" style="margin-bottom:6px;gap:8px;">
-                <div style="flex:1;min-width:0;">
-                  <input type="date" class="input-date" value="${p.planDate||''}" data-plan-date="${p.id}" placeholder="计划日期" style="width:100%;">
-                  <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">📅 计划时间</div>
+                <div class="date-input-wrap" style="flex:1;min-width:0;">
+                  <input type="date" class="input-date empty" value="${p.planDate||''}" data-plan-date="${p.id}" placeholder="计划日期" style="width:100%;">
+                  <span class="date-placeholder">yyyy-mm-dd</span>
                 </div>
-                <div style="flex:1;min-width:0;">
-                  <input type="date" class="input-date" value="${p.realizeDate||''}" data-plan-real="${p.id}" placeholder="实现日期" style="width:100%;">
-                  <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">🌟 实现日期</div>
+                <div class="date-input-wrap" style="flex:1;min-width:0;">
+                  <input type="date" class="input-date empty" value="${p.realizeDate||''}" data-plan-real="${p.id}" placeholder="实现日期" style="width:100%;">
+                  <span class="date-placeholder">yyyy-mm-dd</span>
                 </div>
               </div>
               <div class="field" style="margin-bottom:6px;">
@@ -2664,6 +2730,8 @@ function clearAllData(){
 function init(){
   State.init();
   renderDrawer();
+  // 初始化日期/时间输入框自定义占位符
+  initDatePlaceholders();
   // 抽屉事件
   document.getElementById('hamburger').addEventListener('click',()=>{
     document.getElementById('drawer').classList.add('open');
@@ -3052,6 +3120,23 @@ function init(){
   });
 
   Router.init();
+}
+
+function initDatePlaceholders(){
+  const vc=document.getElementById('view-container');
+  function update(el){
+    if(!el) return;
+    el.classList.toggle('empty', !el.value);
+  }
+  vc.addEventListener('input',(e)=>{
+    const t=e.target;
+    if(t.type==='date'||t.type==='datetime-local'||t.type==='time') update(t);
+  });
+  // 每次渲染后重新标记
+  const observer=new MutationObserver(()=>{
+    vc.querySelectorAll('input[type="date"],input[type="datetime-local"],input[type="time"]').forEach(update);
+  });
+  observer.observe(vc,{childList:true,subtree:true});
 }
 
 // 等待DOM和Chart.js加载
