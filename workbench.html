@@ -173,10 +173,10 @@ input,textarea,select{user-select:text;-webkit-user-select:text;max-width:100%;}
 }
 .textarea{resize:vertical;min-height:60px;border-radius:14px;}
 .select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FF6B9D' d='M6 9L1 4h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
-/* 日期/时间输入框统一窄版，防止超出屏幕 */
-.input-date,.input-time{width:100%;max-width:160px;padding:8px 10px;font-size:13px;border-radius:12px;border:1.5px solid var(--primary-light);background:#fff;color:var(--text-main);font-family:inherit;}
+/* 日期/时间输入框统一样式，避免控件重叠 */
+.input-date,.input-time{width:100%;padding:8px 10px;font-size:13px;border-radius:12px;border:1.5px solid var(--primary-light);background:#fff;color:var(--text-main);font-family:inherit;min-width:0;box-sizing:border-box;}
 .input-date:focus,.input-time:focus{border-color:var(--primary-pink);outline:none;box-shadow:0 0 0 3px rgba(255,107,157,0.12);}
-input[type=date],input[type=time]{min-width:0;}
+input[type=date],input[type=time]{min-width:0;max-width:100%;}
 .btn{
   background:var(--primary-pink);color:#fff;
   border:none;border-radius:20px;
@@ -317,6 +317,11 @@ input[type=date],input[type=time]{min-width:0;}
   padding:4px 0 8px;margin-bottom:4px;
   -webkit-overflow-scrolling:touch;
   scrollbar-width:none;
+  position:sticky;top:calc(56px + var(--safe-top));
+  background:rgba(255,240,243,0.95);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  z-index:10;
 }
 .bm-tabs::-webkit-scrollbar{display:none;}
 .bm-tab{
@@ -457,6 +462,27 @@ input[type=date],input[type=time]{min-width:0;}
 #view-container::-webkit-scrollbar,#drawer::-webkit-scrollbar{display:none;}
 #view-container,#drawer{scrollbar-width:none;}
 
+/* 折叠区域 */
+.collapse-head{
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;user-select:none;
+}
+.collapse-head .arrow{
+  font-size:12px;color:var(--text-sub);
+  transition:transform 0.2s;
+  display:inline-block;
+}
+.collapse-head.open .arrow{transform:rotate(90deg);}
+.collapse-body{
+  overflow:hidden;
+  max-height:0;
+  transition:max-height 0.3s ease;
+}
+.collapse-body.open{
+  max-height:5000px;
+  transition:max-height 0.5s ease;
+}
+
 /* 小屏适配 */
 @media(max-width:360px){
   .grid-2{grid-template-columns:1fr 1fr;gap:8px;}
@@ -468,6 +494,25 @@ input[type=date],input[type=time]{min-width:0;}
 .checklist-item,.list-item-card,.detail-panel,.time-tag{max-width:100%;min-width:0;}
 .list-item-card{overflow:hidden;}
 .detail-panel{overflow:hidden;word-break:break-word;}
+/* 时间输入框专属：保证横向不重叠 */
+.input-time{max-width:100%;}
+.input-time::-webkit-calendar-picker-indicator{opacity:0.5;}
+
+/* 月份统计条目 */
+.month-row{
+  background:var(--bg-pink);
+  border-radius:12px;
+  padding:10px;
+  margin-bottom:8px;
+  cursor:pointer;
+}
+.month-row .month-head{
+  display:flex;justify-content:space-between;align-items:center;
+  font-weight:600;color:var(--primary-pink);
+}
+.month-row .month-head .count{color:var(--text-sub);font-size:12px;font-weight:normal;}
+.month-row .month-detail{margin-top:8px;font-size:13px;display:none;}
+.month-row.open .month-detail{display:block;}
 </style>
 </head>
 <body>
@@ -490,9 +535,10 @@ input[type=date],input[type=time]{min-width:0;}
    A. 配置层
    ============================================================ */
 const CONFIG = {
-  STORAGE_KEY: 'workbench_v1',
-  VERSION: 1,
-  // 9个导航菜单 + 首页 + 设置
+  STORAGE_KEY: 'workbench_v2',
+  VERSION: 2,
+  ICON_KEY: 'workbench_icon',
+  // 导航菜单 + 首页 + 设置
   MENUS: [
     { route:'#home',     emoji:'🏠', label:'首页' },
     { route:'#daily',    emoji:'📋', label:'日计划' },
@@ -597,18 +643,63 @@ const Store = {
   },
   init(){
     let data=this._read();
-    if(!data.version){
-      data={
-        version:CONFIG.VERSION,
-        meta:{ lastOpenDate:Utils.todayStr(), createdAt:Utils.todayStr() },
-        byDate:{},
-        plans:{ weekly:[], monthly:[], yearly:[] }
-      };
-      this._write(data);
+    // 兼容老版本数据（v1 → v2）
+    if(!data.version || data.version<CONFIG.VERSION){
+      data = this._migrateFromV1(data);
     }
     if(!data.meta) data.meta={ lastOpenDate:Utils.todayStr(), createdAt:Utils.todayStr() };
     if(!data.byDate) data.byDate={};
     if(!data.plans) data.plans={ weekly:[], monthly:[], yearly:[] };
+    data.version=CONFIG.VERSION;
+    this._write(data);
+    return data;
+  },
+  // 从 v1 迁移到 v2（睡眠拆分、桌面图标等）
+  _migrateFromV1(old){
+    const data = old || {};
+    data.version = CONFIG.VERSION;
+    if(!data.meta) data.meta={ lastOpenDate:Utils.todayStr(), createdAt:Utils.todayStr() };
+    if(!data.byDate) data.byDate={};
+    if(!data.plans) data.plans={ weekly:[], monthly:[], yearly:[] };
+    // 迁移老睡眠数据：旧 sleep.bedTime/wakeTime/quality/dreamt/records → 全部归到 nightSleep
+    Object.keys(data.byDate).forEach(ds=>{
+      const day = data.byDate[ds];
+      if(day && day.bodyMind && day.bodyMind.sleep){
+        const s = day.bodyMind.sleep;
+        const nightRecs = (s.records||[]).map(r=>(Object.assign({}, r, { type:'night' })));
+        day.bodyMind.sleep = {
+          nap:{ records:[] },
+          nightSleep:{
+            bedTime: s.bedTime||'',
+            wakeTime: s.wakeTime||'',
+            quality: s.quality||0,
+            dreamt: !!s.dreamt,
+            records: nightRecs
+          }
+        };
+      }
+      // 迁移茶饮：旧 takeoutTea/takeoutCoffee/diy/detail → items 数组
+      if(day && day.bodyMind && day.bodyMind.drink){
+        const dr = day.bodyMind.drink;
+        if(!dr.items){
+          const items=[];
+          if(dr.takeoutTea) items.push({id:Utils.uid(),time:'',amount:'',detail:'外购茶饮'});
+          if(dr.takeoutCoffee) items.push({id:Utils.uid(),time:'',amount:'',detail:'外购咖啡'});
+          if(dr.diy) items.push({id:Utils.uid(),time:'',amount:'',detail:'DIY'});
+          if(dr.detail){
+            // 把 detail 拆行作为独立条目
+            dr.detail.split(/[\n,，;；]+/).map(s=>s.trim()).filter(Boolean).forEach(t=>{
+              items.push({id:Utils.uid(),time:'',amount:'',detail:t});
+            });
+          }
+          dr.items = items;
+          // 保留旧字段以防其它代码读到
+          dr.takeoutTea=dr.takeoutTea||false;
+          dr.takeoutCoffee=dr.takeoutCoffee||false;
+          dr.diy=dr.diy||false;
+        }
+      }
+    });
     return data;
   },
   // 获取某天完整数据（自动创建空结构）
@@ -622,6 +713,10 @@ const Store = {
     const day=data.byDate[dateStr];
     const tpl=this._newDayData();
     for(const k in tpl){ if(!(k in day)) day[k]=tpl[k]; }
+    // 补全睡眠新结构
+    if(!day.bodyMind.sleep.nap) day.bodyMind.sleep.nap={ records:[] };
+    if(!day.bodyMind.sleep.nightSleep) day.bodyMind.sleep.nightSleep={ bedTime:'', wakeTime:'', quality:0, dreamt:false, records:[] };
+    if(!day.bodyMind.drink.items) day.bodyMind.drink.items=[];
     return day;
   },
   _newDayData(){
@@ -635,9 +730,12 @@ const Store = {
       },
       wishlist:{ items:[] },
       bodyMind:{
-        sleep:{ bedTime:'', wakeTime:'', quality:0, dreamt:false, records:[] },
+        sleep:{
+          nap:{ records:[] },
+          nightSleep:{ bedTime:'', wakeTime:'', quality:0, dreamt:false, records:[] }
+        },
         diet:{ breakfast:'', lunch:'', dinner:'', snack:'', fruit:'' },
-        drink:{ takeoutTea:false, takeoutCoffee:false, diy:false, detail:'' },
+        drink:{ items:[], takeoutTea:false, takeoutCoffee:false, diy:false, detail:'' },
         exercise:{ items:[] },
         media:{ items:[] },
         skincare:{ items:[] },
@@ -680,9 +778,11 @@ const Store = {
     if(d.wishlist && d.wishlist.items.length) return true;
     if(d.bodyMind){
       const b=d.bodyMind;
-      if(b.sleep.bedTime||b.sleep.wakeTime||b.sleep.quality) return true;
+      if((b.sleep.nightSleep.bedTime)||(b.sleep.nightSleep.wakeTime)||(b.sleep.nightSleep.quality)) return true;
+      if(b.sleep.nap.records && b.sleep.nap.records.length) return true;
+      if(b.sleep.nightSleep.records && b.sleep.nightSleep.records.length) return true;
       if(b.diet.breakfast||b.diet.lunch||b.diet.dinner||b.diet.snack||b.diet.fruit) return true;
-      if(b.drink.takeoutTea||b.drink.takeoutCoffee||b.drink.diy||b.drink.detail) return true;
+      if((b.drink.items && b.drink.items.length)||b.drink.takeoutTea||b.drink.takeoutCoffee||b.drink.diy||b.drink.detail) return true;
       if(b.exercise.items.length) return true;
       if(b.media.items.length) return true;
       if(b.skincare.items.length) return true;
@@ -711,6 +811,20 @@ const Store = {
   },
   getLastOpenDate(){
     return this._read().meta?.lastOpenDate;
+  },
+  // 桌面图标（base64 dataURL）
+  getCustomIcon(){
+    return localStorage.getItem(CONFIG.ICON_KEY);
+  },
+  setCustomIcon(dataUrl){
+    if(!dataUrl){ localStorage.removeItem(CONFIG.ICON_KEY); return; }
+    localStorage.setItem(CONFIG.ICON_KEY, dataUrl);
+    // 动态替换 apple-touch-icon
+    let link=document.querySelector('link[rel="apple-touch-icon"]');
+    if(link){ link.href=dataUrl; }
+    // 同时替换 favicon
+    let flink=document.querySelector('link[rel="icon"]');
+    if(flink){ flink.href=dataUrl; }
   }
 };
 
@@ -724,10 +838,30 @@ const State = {
   bodyMindSub: null,
   drinkMonth: null,   // 茶饮咖啡统计月份
   bodyMonth: null,    // 体重体脂统计月份
+  sleepMonth: null,   // 睡眠历史统计月份
+  readingMonth: null, // 待阅历史统计月份
+  wishMonth: null,    // 种草历史统计月份
   chartCache: {},
+  // 折叠状态（页面刷新前一直保留）
+  collapse: {
+    sleepHistory: false,
+    readingHistory: false,
+    wishHistory: false,
+    sleepMonthOpen: {}  // 睡眠按月展开
+  },
   init(){
     Store.init();
     this.checkDayRollover();
+    this.applyCustomIcon();
+  },
+  applyCustomIcon(){
+    const icon=Store.getCustomIcon();
+    if(icon){
+      let link=document.querySelector('link[rel="apple-touch-icon"]');
+      if(link) link.href=icon;
+      let flink=document.querySelector('link[rel="icon"]');
+      if(flink) flink.href=icon;
+    }
   },
   checkDayRollover(){
     const last=Store.getLastOpenDate();
@@ -790,8 +924,15 @@ const Router = {
     const fn=this.routes[route]||this.routes['#home'];
     const container=document.getElementById('view-container');
     container.innerHTML='';
+    // 记录切换前滚动位置（日计划勾选不滚顶用）
+    State._prevScroll = container.scrollTop;
     fn();
-    container.scrollTop=0;
+    // 保持日计划勾选前的浏览位置；其他模块保持原滚顶行为
+    if(route!=='#daily'){
+      container.scrollTop=0;
+    }else{
+      container.scrollTop = State._prevScroll||0;
+    }
   }
 };
 
@@ -877,26 +1018,28 @@ function renderPie(canvasId, labels, data, colors){
             }
           }
         },
-        // 在扇区上显示百分比
         datalabels:{ display:false }
       }
     },
-    // 自定义插件：在扇区中央显示百分比
     plugins:[{
       id:'piePercent',
       afterDatasetsDraw(chart){
         const ds=chart.data.datasets[0];
         const meta=chart.getDatasetMeta(0);
-        const sum=ds.data.reduce((s,v)=>s+v,0);
+        // 过滤掉空值（小于 0.01 的占位）
+        const realVals=ds.data.filter(v=>v>0.01);
+        const sum=realVals.reduce((s,v)=>s+v,0);
         ds.data.forEach((val,i)=>{
           const el=meta.data[i];
-          if(!el||!val) return;
+          if(!el||val<0.01) return;
+          // 只在第一项（"已完成"）上画百分比；其它扇区不画
+          if(i!==0) return;
           const pct=Math.round(val/sum*100);
           if(pct===0) return;
           const pos=el.tooltipPosition();
           const ctx=chart.ctx;
           ctx.save();
-          ctx.font='bold 12px sans-serif';
+          ctx.font='bold 14px sans-serif';
           ctx.fillStyle='#fff';
           ctx.textAlign='center';
           ctx.textBaseline='middle';
@@ -994,6 +1137,8 @@ function renderHome(){
       </div>
     </div>
 
+    ${renderHomeBodyMindOverview(d,day.bodyMind)}
+
     <div class="card">
       <div class="card-title"><span class="emoji">📅</span>周计划进度</div>
       <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
@@ -1021,39 +1166,51 @@ function renderHome(){
       <div class="progress-bar"><div class="progress-fill" style="width:${yearPlans.length?yearPlans.filter(p=>p.realizeDate).length/yearPlans.length*100:0}%"></div></div>
     </div>
 
-    ${renderHomeBodyMindOverview(d,day.bodyMind)}
-
     ${renderHomeReadingReminder(d,day.readingQueue)}
-
-    <div class="card" style="text-align:center;">
-      <button class="btn btn-outline" onclick="Calendar.open()">📅 查看历史日历</button>
-    </div>
   `;
 
   // 渲染饼图
   setTimeout(()=>{
-    renderPie('home-ben-pie',['已完成','未完成'],[benDone,Math.max(0,benTotal-benDone)],['#FF6B9D','#FFE4EC']);
-    renderPie('home-tt-pie',['已完成','未完成'],[ttDone,Math.max(0,ttTotal-ttDone)],['#FFD93D','#FFF3C4']);
+    const benUndone=Math.max(0,benTotal-benDone);
+    const ttUndone=Math.max(0,ttTotal-ttDone);
+    // 当总数为 0 时显示占位
+    if(benTotal===0){
+      document.getElementById('home-ben-pie').parentElement.innerHTML='<div class="empty-state" style="padding:10px;font-size:12px;">暂无数据</div>';
+    }else{
+      renderPie('home-ben-pie',['已完成','未完成'],[benDone, benUndone || 0.0001],['#FF6B9D','#FFE4EC']);
+    }
+    if(ttTotal===0){
+      document.getElementById('home-tt-pie').parentElement.innerHTML='<div class="empty-state" style="padding:10px;font-size:12px;">暂无数据</div>';
+    }else{
+      renderPie('home-tt-pie',['已完成','未完成'],[ttDone, ttUndone || 0.0001],['#FFD93D','#FFF3C4']);
+    }
   },50);
 }
 
 function renderHomeBodyMindOverview(d,bm){
   const items=[];
-  if(bm.sleep.bedTime||bm.sleep.wakeTime||bm.sleep.quality) items.push({emoji:'😴',label:'睡眠',val:bm.sleep.quality?('⭐'.repeat(bm.sleep.quality)):(bm.sleep.bedTime+'~'+bm.sleep.wakeTime)});
+  // 睡眠
+  const ns=bm.sleep.nightSleep||{};
+  const nap=bm.sleep.nap||{records:[]};
+  if(ns.bedTime||ns.wakeTime||ns.quality){
+    items.push({emoji:'🌙',label:'夜间',val:ns.quality?('⭐'.repeat(ns.quality)):(ns.bedTime+'~'+ns.wakeTime)});
+  }
+  if(nap.records && nap.records.length){
+    items.push({emoji:'😴',label:'午睡',val:nap.records.length+'次'});
+  }
   if(bm.diet.breakfast||bm.diet.lunch||bm.diet.dinner||bm.diet.snack||bm.diet.fruit) items.push({emoji:'🍱',label:'饮食',val:'已记录'});
-  if(bm.drink.takeoutTea||bm.drink.takeoutCoffee||bm.drink.diy||bm.drink.detail) items.push({emoji:'☕',label:'茶饮',val:'已记录'});
+  if((bm.drink.items && bm.drink.items.length)||bm.drink.takeoutTea||bm.drink.takeoutCoffee||bm.drink.diy||bm.drink.detail) items.push({emoji:'☕',label:'茶饮',val:(bm.drink.items?bm.drink.items.length:0)+'条'});
   if(bm.exercise.items.length) items.push({emoji:'🏃',label:'锻炼',val:bm.exercise.items.length+'项 '+bm.exercise.items.reduce((s,i)=>s+(Number(i.duration)||0),0)+'分'});
   if(bm.media.items.length) items.push({emoji:'📖',label:'观阅',val:bm.media.items.length+'项'});
   if(bm.skincare.items.length) items.push({emoji:'🧴',label:'护肤',val:bm.skincare.items.length+'项'});
   if(bm.bodyData.weight) items.push({emoji:'⚖️',label:'体重',val:bm.bodyData.weight+'kg'});
   if(bm.medical.records.length) items.push({emoji:'🏥',label:'就医',val:bm.medical.records.length+'次'});
-  if(!items.length) return '';
   return `
-    <div class="card">
+    <div class="card" onclick="State.navigate('#bodymind')" style="cursor:pointer;">
       <div class="card-title"><span class="emoji">🌿</span>今日身心成长总览</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${items.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;">
         ${items.map(it=>`<span class="time-tag" style="font-size:12px;">${it.emoji} ${it.label}: ${Utils.esc(it.val)}</span>`).join('')}
-      </div>
+      </div>`:`<div style="font-size:13px;color:var(--text-sub);text-align:center;padding:6px 0;">点击进入身心成长 → 记录睡眠 / 饮食 / 茶饮 / 锻炼等</div>`}
     </div>
   `;
 }
@@ -1121,8 +1278,8 @@ function renderDailyPlan(){
             ${dp.tiaotiao.pooLog.times.map((t,i)=>`
               <span class="time-tag">⏰${t}<button class="del-time" data-del-poo="${i}">×</button></span>
             `).join('')}
-            <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
-              <input type="time" class="input" id="poo-time" style="width:110px;padding:6px 8px;font-size:13px;">
+            <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap;">
+              <input type="time" class="input-time" id="poo-time" placeholder="记录时间" style="width:130px;padding:6px 8px;font-size:13px;">
               <button class="btn btn-sm btn-yellow" data-add-poo style="font-size:12px;padding:5px 10px;">+记录</button>
             </div>
           </div>
@@ -1202,7 +1359,15 @@ const Calendar = {
         const action=nav.dataset.nav;
         if(action==='prev'){ d.setMonth(d.getMonth()-1); this.viewDate=Utils.toDateStr(d); this.render(); }
         else if(action==='next'){ d.setMonth(d.getMonth()+1); this.viewDate=Utils.toDateStr(d); this.render(); }
-        else if(action==='today'){ this.viewDate=Utils.todayStr(); this.render(); }
+        else if(action==='today'){
+          // 修复：回到今天 = 关闭日历 + 跳回今天日期
+          const today=Utils.todayStr();
+          State.currentDate=today;
+          State.isToday=true;
+          // 保持在当前菜单，但日期切回今天；如果当前在首页/二级菜单里，按"今天"渲染
+          this.close();
+          State.render();
+        }
         else if(action==='close'){ this.close(); }
         return;
       }
@@ -1212,44 +1377,85 @@ const Calendar = {
 };
 
 /* ============================================================
-   种草添置
+   种草添置（三栏：历史 / 今日 / 添加）
    ============================================================ */
 function renderWishlist(){
   const d=State.currentDate;
-  const day=Store.getDay(d);
-  const wl=day.wishlist;
-  const done=wl.items.filter(i=>i.done).length;
-  const total=wl.items.length;
+  const allData=Store._read().byDate;
+
+  // 收集全部种草条目（含 completed）
+  const allItems=[];
+  Object.keys(allData).sort().forEach(ds=>{
+    const items=(allData[ds]?.wishlist?.items)||[];
+    items.forEach((it,idx)=>{
+      allItems.push({date:ds, idx, ...it});
+    });
+  });
+  // 按时间倒序
+  allItems.sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  const undoneItems = allItems.filter(i=>!i.done);
+  const todayItems = undoneItems.filter(i=>i.date===d);
 
   const vc=document.getElementById('view-container');
+  const isOpen = State.collapse.wishHistory;
+
   vc.innerHTML=`
     <div class="card" style="text-align:center;">
       <div style="font-size:13px;color:var(--text-sub);margin-bottom:6px;">${Utils.fullDateCN(d)}</div>
       <div class="stat-row" style="justify-content:center;">
-        <span class="stat-num">${done}</span><span style="color:var(--text-sub);">/${total||0} 已种草</span>
+        <span class="stat-num">${undoneItems.length}</span><span style="color:var(--text-sub);">/${allItems.length} 未完成/全部</span>
       </div>
-      ${total?`<div class="progress-bar" style="margin-top:6px;"><div class="progress-fill" style="width:${done/total*100}%"></div></div>`:''}
+      ${allItems.length?`<div class="progress-bar" style="margin-top:6px;"><div class="progress-fill" style="width:${allItems.length?Math.round((allItems.length-undoneItems.length)/allItems.length*100):0}%"></div></div>`:''}
     </div>
+
+    <!-- 1. 历史种草清单（默认折叠） -->
     <div class="card">
-      <div class="card-title"><span class="emoji">🛒</span>种草清单</div>
-      <div id="wishlist-list">
-        ${total?wl.items.map((item,i)=>`
-          <div class="checklist-item">
+      <div class="collapse-head ${isOpen?'open':''}" data-collapse="wishHistory">
+        <div class="card-title" style="margin:0;">
+          <span class="emoji">🗂️</span>历史种草清单
+        </div>
+        <div>
+          <span class="time-tag" style="font-size:12px;">${undoneItems.length} 项未完成</span>
+          <span class="arrow">▶</span>
+        </div>
+      </div>
+      <div class="collapse-body ${isOpen?'open':''}">
+        <div id="wish-history-list" style="margin-top:8px;">
+          ${undoneItems.length?undoneItems.map((item)=>`
+            <div class="checklist-item" data-wish-global-id="${item.id}">
+              <span style="font-size:12px;color:var(--text-sub);flex-shrink:0;">${item.date.slice(5)}</span>
+              <span class="item-label ${item.done?'done':''}" style="flex:1;">${Utils.esc(item.label)}</span>
+              <button class="del-time" data-wl-del-global="${item.id}" style="font-size:16px;">✕</button>
+            </div>
+          `).join(''):'<div class="empty-state" style="padding:14px;"><span class="emoji">🛍️</span>暂无未完成种草</div>'}
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 今日种草 -->
+    <div class="card">
+      <div class="card-title"><span class="emoji">🛒</span>今日种草</div>
+      <div id="wish-today-list">
+        ${todayItems.length?todayItems.map((item)=>`
+          <div class="checklist-item" data-wish-global-id="${item.id}">
             <label class="checkbox-wrap">
-              <input type="checkbox" data-wl-check="${i}" ${item.done?'checked':''}>
+              <input type="checkbox" data-wl-check-global="${item.id}" ${item.done?'checked':''}>
             </label>
             <span class="item-label ${item.done?'done':''}" style="flex:1;">${Utils.esc(item.label)}</span>
-            <button class="del-time" data-wl-del="${i}" style="font-size:16px;">✕</button>
+            <button class="del-time" data-wl-del-global="${item.id}" style="font-size:16px;">✕</button>
           </div>
-        `).join(''):'<div class="empty-state"><span class="emoji">🛍️</span>还没有种草的内容~</div>'}
+        `).join(''):'<div class="empty-state" style="padding:14px;"><span class="emoji">🌱</span>今日还没有新增种草</div>'}
       </div>
     </div>
+
+    <!-- 3. 添加种草 -->
     <div class="card">
       <div class="card-title"><span class="emoji">➕</span>添加种草</div>
       <div class="field" style="margin-bottom:8px;">
         <input type="text" class="input" id="wl-new" placeholder="想买什么">
       </div>
       <button class="btn" style="width:100%;" onclick="addWishlist('${d}')">添加</button>
+      <div style="font-size:12px;color:var(--text-sub);margin-top:6px;text-align:center;">新条目将同步出现在【今日种草】与【历史种草清单】</div>
     </div>
   `;
 }
@@ -1309,70 +1515,125 @@ function renderBodyMindSub(sub){
   // 初始化月份
   if(sub.id==='drink' && !State.drinkMonth) State.drinkMonth=d.slice(0,7);
   if(sub.id==='bodyData' && !State.bodyMonth) State.bodyMonth=d.slice(0,7);
+  if(sub.id==='sleep' && !State.sleepMonth) State.sleepMonth=d.slice(0,7);
 
   const day=Store.getDay(d);
   const bm=day.bodyMind[sub.id];
   const vc=document.getElementById('view-container');
-  // 顶部横向标签栏，可直接切换子模块
-  vc.innerHTML=`
-    <div class="bm-tabs">
+
+  // 标签栏 + 标签栏点击 → 切换子菜单时保持滚动位置
+  const tabsHtml=`
+    <div class="bm-tabs" id="bm-tabs-${sub.id}">
       ${CONFIG.BODYMIND_SUBS.map(s=>`<button class="bm-tab ${s.id===sub.id?'active':''}" data-bmtab="${s.id}">${s.emoji}${s.label}</button>`).join('')}
     </div>
   `;
+  // 恢复滚动位置
+  const savedScroll=State._bmTabsScrollLeft||0;
+
+  vc.innerHTML = tabsHtml;
+
+  // 渲染完后恢复滚动位置
+  setTimeout(()=>{
+    const tabs=document.getElementById('bm-tabs-'+sub.id);
+    if(tabs) tabs.scrollLeft=savedScroll;
+  },0);
+
   vc.addEventListener('click',(e)=>{
     const tab=e.target.closest('[data-bmtab]');
-    if(tab){ State.bodyMindSub=tab.dataset.bmtab; State.render(); }
+    if(tab){
+      // 记住当前标签栏滚动位置
+      const cur=document.getElementById('bm-tabs-'+sub.id);
+      if(cur) State._bmTabsScrollLeft = cur.scrollLeft;
+      State.bodyMindSub=tab.dataset.bmtab;
+      State.render();
+    }
   });
 
   if(sub.id==='sleep'){
+    const ns = bm.nightSleep || {bedTime:'',wakeTime:'',quality:0,dreamt:false,records:[]};
+    const nap = bm.nap || {records:[]};
     vc.innerHTML+=`
       <div class="card">
         <div class="card-title"><span class="emoji">😴</span>今日睡眠</div>
-        <div class="field-row" style="margin-bottom:8px;gap:12px;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:12px;color:var(--text-sub);margin-bottom:3px;">🌙 入睡</div>
-            <input type="time" class="input-time" id="sleep-bed" value="${bm.bedTime||''}" style="width:100%;">
+
+        <!-- 双栏：午睡 / 夜间睡眠 -->
+        <div class="grid-2" style="margin-bottom:10px;">
+          <!-- 午睡 -->
+          <div style="background:var(--bg-pink);border-radius:12px;padding:10px;">
+            <div style="font-size:13px;font-weight:700;color:var(--primary-pink);margin-bottom:6px;">☀️ 午睡</div>
+            <div id="nap-list">
+              ${(nap.records||[]).map((r,i)=>`
+                <div class="list-item-card" style="padding:8px;margin-bottom:6px;border-left-width:2px;">
+                  <div class="field-row" style="gap:4px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:11px;color:var(--text-sub);">入睡</div>
+                      <input type="time" class="input-time" value="${r.bedTime||''}" data-nap-bed="${i}" placeholder="入睡时间" style="width:100%;">
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:11px;color:var(--text-sub);">醒来</div>
+                      <input type="time" class="input-time" value="${r.wakeTime||''}" data-nap-wake="${i}" placeholder="醒来时间" style="width:100%;">
+                    </div>
+                    <button class="del-time" data-nap-del="${i}" style="font-size:14px;flex-shrink:0;">✕</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <button class="btn btn-sm btn-outline" style="width:100%;margin-top:6px;" data-add-nap>➕ 添加午睡</button>
           </div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:12px;color:var(--text-sub);margin-bottom:3px;">☀️ 醒来</div>
-            <input type="time" class="input-time" id="sleep-wake" value="${bm.wakeTime||''}" style="width:100%;">
+          <!-- 夜间睡眠 -->
+          <div style="background:var(--bg-pink);border-radius:12px;padding:10px;">
+            <div style="font-size:13px;font-weight:700;color:var(--primary-pink);margin-bottom:6px;">🌙 夜间睡眠</div>
+            <div class="field-row" style="margin-bottom:6px;gap:6px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;color:var(--text-sub);">入睡</div>
+                <input type="time" class="input-time" id="sleep-bed" value="${ns.bedTime||''}" placeholder="入睡时间" style="width:100%;">
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:11px;color:var(--text-sub);">醒来</div>
+                <input type="time" class="input-time" id="sleep-wake" value="${ns.wakeTime||''}" placeholder="醒来时间" style="width:100%;">
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--text-sub);margin-bottom:3px;">睡眠质量</div>
+              <div style="display:flex;gap:4px;">
+                ${[1,2,3].map(n=>`<button class="btn btn-sm ${ns.quality===n?'':'btn-outline'}" data-sleep-q="${n}" style="flex:1;font-size:12px;padding:5px 4px;">${'⭐'.repeat(n)}</button>`).join('')}
+              </div>
+            </div>
+            <label class="checkbox-wrap" style="font-size:12px;"><input type="checkbox" id="sleep-dream" ${ns.dreamt?'checked':''}> 💭 做梦</label>
           </div>
         </div>
-        <div class="field" style="margin-bottom:8px;">
-          <div style="font-size:12px;color:var(--text-sub);margin-bottom:4px;">睡眠质量</div>
-          <div style="display:flex;gap:6px;">
-            ${[1,2,3].map(n=>`<button class="btn btn-sm ${bm.quality===n?'':'btn-outline'}" data-sleep-q="${n}" style="flex:1;">${'⭐'.repeat(n)}</button>`).join('')}
-          </div>
-        </div>
-        <div class="field">
-          <label class="checkbox-wrap"><input type="checkbox" id="sleep-dream" ${bm.dreamt?'checked':''}> 💭 做梦了吗</label>
-        </div>
-        <button class="btn" style="margin-top:10px;width:100%;" onclick="saveSleep('${d}')">💾 保存今日</button>
+
+        <button class="btn" style="margin-top:6px;width:100%;" onclick="saveSleep('${d}')">💾 保存今日</button>
       </div>
+
       <div class="card">
-        <div class="card-title"><span class="emoji">📊</span>${d.slice(0,7)} 睡眠质量分布</div>
+        <div class="card-title"><span class="emoji">📊</span>${State.sleepMonth} 睡眠质量分布</div>
         <div class="chart-container medium"><canvas id="sleep-month-pie"></canvas></div>
       </div>
+
+      <!-- 历史睡眠记录：按月统计视图 -->
       <div class="card">
-        <div class="card-title"><span class="emoji">📋</span>历史睡眠记录</div>
-        <div id="sleep-history">
-          ${(bm.records||[]).length?(bm.records||[]).map((r,i)=>`
-            <div class="list-item-card" style="margin-bottom:8px;">
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
-                <span style="font-size:13px;font-weight:600;">${r.date||'-'}</span>
-                <span style="font-size:12px;color:var(--text-sub);">${r.bedTime||''}~${r.wakeTime||''}</span>
-                <span style="font-size:12px;">${'⭐'.repeat(r.quality||0)}</span>
-                ${r.dreamt?'<span style="font-size:12px;">💭</span>':''}
-                <button class="del-time" data-sleep-del="${i}" style="margin-left:auto;font-size:14px;">✕</button>
-              </div>
-              <button class="btn btn-sm btn-outline" data-sleep-add-history="${i}" style="font-size:12px;width:100%;">📌 添加到历史</button>
-            </div>
-          `).join(''):'<div class="empty-state" style="padding:16px;"><span class="emoji">📋</span>暂无历史记录</div>'}
+        <div class="collapse-head ${State.collapse.sleepHistory?'open':''}" data-collapse="sleepHistory">
+          <div class="card-title" style="margin:0;">
+            <span class="emoji">📋</span>历史睡眠记录
+          </div>
+          <div>
+            <span class="arrow">▶</span>
+          </div>
         </div>
-        <button class="btn btn-sm btn-outline" style="margin-top:8px;width:100%;" data-sleep-add-today>📌 把今日记录加入历史</button>
+        <div class="collapse-body ${State.collapse.sleepHistory?'open':''}">
+          <div style="display:flex;gap:6px;margin:8px 0;align-items:center;">
+            <button class="btn btn-sm btn-outline" data-sleep-month="-1">‹</button>
+            <span style="flex:1;text-align:center;font-weight:700;color:var(--primary-pink);">${State.sleepMonth}</span>
+            <button class="btn btn-sm btn-outline" data-sleep-month="1">›</button>
+          </div>
+          <div id="sleep-history-by-month">
+            ${renderSleepMonthGrouped(State.sleepMonth, d)}
+          </div>
+        </div>
       </div>
     `;
-    setTimeout(()=>renderSleepMonthPie(d),50);
+    setTimeout(()=>renderSleepMonthPie(d,State.sleepMonth),50);
   }
   else if(sub.id==='diet'){
     vc.innerHTML+=`
@@ -1390,23 +1651,32 @@ function renderBodyMindSub(sub){
   }
   else if(sub.id==='drink'){
     const month=State.drinkMonth;
+    const items = bm.items || [];
     vc.innerHTML+=`
       <div class="card">
         <div class="card-title"><span class="emoji">☕</span>今日茶饮咖啡</div>
-        <label class="checkbox-wrap" style="display:block;margin-bottom:8px;">
-          <input type="checkbox" id="drink-tea" ${bm.takeoutTea?'checked':''}> 🍵 外购茶饮
-        </label>
-        <label class="checkbox-wrap" style="display:block;margin-bottom:8px;">
-          <input type="checkbox" id="drink-coffee" ${bm.takeoutCoffee?'checked':''}> ☕ 外购咖啡
-        </label>
-        <label class="checkbox-wrap" style="display:block;margin-bottom:8px;">
-          <input type="checkbox" id="drink-diy" ${bm.diy?'checked':''}> 🏠 DIY
-        </label>
-        <div class="field">
-          <div class="field-label" style="font-size:13px;color:var(--text-sub);margin-bottom:3px;">喝了什么（详情）</div>
-          <textarea class="textarea" id="drink-detail" placeholder="喝了什么">${Utils.esc(bm.detail||'')}</textarea>
+        <div id="drink-list">
+          ${items.length?items.map((it,i)=>`
+            <div class="list-item-card" style="margin-bottom:8px;padding:10px;">
+              <div class="field-row" style="gap:6px;margin-bottom:6px;">
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:11px;color:var(--text-sub);">时间</div>
+                  <input type="time" class="input-time" value="${it.time||''}" data-drink-time="${i}" placeholder="饮用时间" style="width:100%;">
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:11px;color:var(--text-sub);">饮用量(ml)</div>
+                  <input type="number" class="input" value="${it.amount||''}" data-drink-amount="${i}" style="width:100%;font-size:13px;padding:7px 8px;">
+                </div>
+                <button class="del-time" data-drink-del="${i}" style="font-size:16px;flex-shrink:0;align-self:flex-end;margin-bottom:6px;">✕</button>
+              </div>
+              <input type="text" class="input" value="${Utils.esc(it.detail||'')}" data-drink-detail="${i}" placeholder="喝了什么（如：美式咖啡/乌龙茶）" style="font-size:13px;padding:7px 10px;">
+            </div>
+          `).join(''):'<div class="empty-state" style="padding:14px;"><span class="emoji">☕</span>今天还没有记录饮品</div>'}
         </div>
-        <button class="btn" style="margin-top:10px;width:100%;" onclick="saveDrink('${d}')">💾 保存</button>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button class="btn btn-sm btn-outline" style="flex:1;" onclick="addDrinkItem('${d}')">➕ 添加条目</button>
+          <button class="btn" style="flex:1;" onclick="saveDrink('${d}')">💾 保存</button>
+        </div>
       </div>
       <div class="card">
         <div class="card-title"><span class="emoji">📊</span>茶饮统计</div>
@@ -1471,7 +1741,7 @@ function renderBodyMindSub(sub){
           `).join(''):'<div class="empty-state"><span class="emoji">📚</span>今天还没阅读/观影~</div>'}
         </div>
         <button class="btn btn-sm btn-outline" style="margin-top:8px;width:100%;" onclick="addMedia('${d}')">➕ 添加项目</button>
-        ${bm.items.length?`<div style="text-align:center;margin-top:10px;font-size:14px;">总时长 <span class="stat-num" style="font-size:20px;">${bm.items.reduce((s,i)=>s+(Number(i.duration)||0),0)}</span> 分钟</div>`:''}
+        ${bm.items.length?`<div style="text-align:center;margin-top:10px;font-size:14px;">总时长 <span class="stat-num" style="font-size:20px;">${bm.items.reduce((s,i)=>s+(Number(it.duration)||0),0)}</span> 分钟</div>`:''}
         <button class="btn" style="margin-top:8px;width:100%;" onclick="saveMedia('${d}')">💾 保存</button>
       </div>
     `;
@@ -1536,9 +1806,9 @@ function renderBodyMindSub(sub){
         <div id="med-list">
           ${bm.records.length?bm.records.map((r,i)=>`
             <div class="list-item-card" style="margin-bottom:8px;">
-              <div class="field-row" style="margin-bottom:6px;">
-                <input type="date" class="input-date" value="${r.date||''}" data-med-date="${i}" style="flex-shrink:0;">
-                <input type="text" class="input" value="${Utils.esc(r.diagnosis)}" data-med-diag="${i}" placeholder="确诊疾病" style="flex:1;min-width:0;">
+              <div class="field-row" style="margin-bottom:6px;gap:6px;">
+                <input type="date" class="input-date" value="${r.date||''}" data-med-date="${i}" placeholder="记录日期" style="flex:1 1 130px;">
+                <input type="text" class="input" value="${Utils.esc(r.diagnosis)}" data-med-diag="${i}" placeholder="确诊疾病" style="flex:2 1 140px;min-width:0;">
                 <button class="del-time" data-med-del="${i}" style="font-size:16px;flex-shrink:0;">✕</button>
               </div>
               <div class="field-row" style="margin-bottom:6px;">
@@ -1554,7 +1824,7 @@ function renderBodyMindSub(sub){
     `;
   }
 
-  // 通用删除事件（持久绑定，解决切换后失效）
+  // 通用删除/操作事件（持久绑定）
   vc.addEventListener('click',(e)=>{
     const exDel=e.target.closest('[data-ex-del]');
     if(exDel){ const day=Store.getDay(d); day.bodyMind.exercise.items.splice(parseInt(exDel.dataset.exDel),1); Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render(); return; }
@@ -1565,41 +1835,185 @@ function renderBodyMindSub(sub){
     const medDel=e.target.closest('[data-med-del]');
     if(medDel){ const day=Store.getDay(d); day.bodyMind.medical.records.splice(parseInt(medDel.dataset.medDel),1); Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render(); return; }
     const sleepQ=e.target.closest('[data-sleep-q]');
-    if(sleepQ){ const day=Store.getDay(d); day.bodyMind.sleep.quality=parseInt(sleepQ.dataset.sleepQ); Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render(); return; }
-    const sleepDel=e.target.closest('[data-sleep-del]');
-    if(sleepDel){ const day=Store.getDay(d); day.bodyMind.sleep.records.splice(parseInt(sleepDel.dataset.sleepDel),1); Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render(); return; }
-    const sleepAddToday=e.target.closest('[data-sleep-add-today]');
-    if(sleepAddToday){ const day=Store.getDay(d); const s=day.bodyMind.sleep; if(!s.bedTime&&!s.quality){Utils.toast('请先填写今日睡眠');return;} s.records=s.records||[]; s.records.push({date:d,bedTime:s.bedTime,wakeTime:s.wakeTime,quality:s.quality,dreamt:s.dreamt}); Store.saveDayModule(d,'bodyMind',day.bodyMind); Utils.toast('已加入历史~'); State.render(); return; }
+    if(sleepQ){
+      const day=Store.getDay(d);
+      const cur = day.bodyMind.sleep.nightSleep.quality;
+      const n = parseInt(sleepQ.dataset.sleepQ);
+      day.bodyMind.sleep.nightSleep.quality = (cur===n) ? 0 : n;
+      Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render(); return;
+    }
+    // 睡眠历史：按月展开/折叠
+    const sleepRow=e.target.closest('.month-row');
+    if(sleepRow){
+      sleepRow.classList.toggle('open');
+      return;
+    }
+    // 睡眠月份切换
+    const sm=e.target.closest('[data-sleep-month]');
+    if(sm){
+      const delta=parseInt(sm.dataset.sleepMonth);
+      const [y,m]=State.sleepMonth.split('-').map(Number);
+      const nd=new Date(y,m-1+delta,1);
+      State.sleepMonth=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}`;
+      State.render();
+      return;
+    }
+    // 午睡：删除
+    const napDel=e.target.closest('[data-nap-del]');
+    if(napDel){
+      const day=Store.getDay(d);
+      day.bodyMind.sleep.nap.records.splice(parseInt(napDel.dataset.napDel),1);
+      Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render();
+      return;
+    }
+    // 午睡：添加
+    const addNap=e.target.closest('[data-add-nap]');
+    if(addNap){
+      const day=Store.getDay(d);
+      if(!day.bodyMind.sleep.nap) day.bodyMind.sleep.nap={records:[]};
+      if(!day.bodyMind.sleep.nap.records) day.bodyMind.sleep.nap.records=[];
+      day.bodyMind.sleep.nap.records.push({bedTime:'',wakeTime:'',addedAt:d});
+      Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render();
+      return;
+    }
+    // 茶饮：删除
+    const drinkDel=e.target.closest('[data-drink-del]');
+    if(drinkDel){
+      const day=Store.getDay(d);
+      const i=parseInt(drinkDel.dataset.drinkDel);
+      day.bodyMind.drink.items.splice(i,1);
+      Store.saveDayModule(d,'bodyMind',day.bodyMind); State.render();
+      return;
+    }
   });
+
+  // 睡眠/茶饮字段 change 监听（保存午睡、修改饮用量等）
+  vc.addEventListener('change',(e)=>{
+    const t=e.target;
+    if(t.dataset.napBed!==undefined){
+      const i=parseInt(t.dataset.napBed);
+      const day=Store.getDay(d);
+      day.bodyMind.sleep.nap.records[i].bedTime=t.value;
+      Store.saveDayModule(d,'bodyMind',day.bodyMind);
+      return;
+    }
+    if(t.dataset.napWake!==undefined){
+      const i=parseInt(t.dataset.napWake);
+      const day=Store.getDay(d);
+      day.bodyMind.sleep.nap.records[i].wakeTime=t.value;
+      Store.saveDayModule(d,'bodyMind',day.bodyMind);
+      return;
+    }
+    if(t.dataset.drinkTime!==undefined){
+      const i=parseInt(t.dataset.drinkTime);
+      const day=Store.getDay(d);
+      day.bodyMind.drink.items[i].time=t.value;
+      Store.saveDayModule(d,'bodyMind',day.bodyMind);
+      return;
+    }
+    if(t.dataset.drinkAmount!==undefined){
+      const i=parseInt(t.dataset.drinkAmount);
+      const day=Store.getDay(d);
+      day.bodyMind.drink.items[i].amount=t.value;
+      Store.saveDayModule(d,'bodyMind',day.bodyMind);
+      return;
+    }
+    if(t.dataset.drinkDetail!==undefined){
+      const i=parseInt(t.dataset.drinkDetail);
+      const day=Store.getDay(d);
+      day.bodyMind.drink.items[i].detail=t.value;
+      Store.saveDayModule(d,'bodyMind',day.bodyMind);
+      return;
+    }
+  });
+}
+
+// 睡眠：按月分组渲染（午睡/夜间睡眠 区分）
+function renderSleepMonthGrouped(month, currentDate){
+  const data=Store._read().byDate;
+  // 收集所有月份内睡眠记录（包含历史records和当前日数据）
+  const napByDate={};
+  const nightByDate={};
+  const todayNS = data[currentDate]?.bodyMind?.sleep?.nightSleep || {};
+  if(todayNS.bedTime || todayNS.wakeTime || todayNS.quality){
+    nightByDate[currentDate]=[{bedTime:todayNS.bedTime,wakeTime:todayNS.wakeTime,quality:todayNS.quality,dreamt:todayNS.dreamt,fromCurrent:true}];
+  }
+  const todayNap = (data[currentDate]?.bodyMind?.sleep?.nap?.records)||[];
+  if(todayNap.length){
+    napByDate[currentDate] = todayNap;
+  }
+  Object.keys(data).forEach(ds=>{
+    if(ds===currentDate) return;
+    if(!ds.startsWith(month)) return;
+    const s=data[ds]?.bodyMind?.sleep;
+    if(!s) return;
+    const ns=s.nightSleep||{};
+    if(ns.records && ns.records.length){
+      nightByDate[ds]=(nightByDate[ds]||[]).concat(ns.records.map(r=>Object.assign({},r)));
+    }
+    if(ns.bedTime || ns.wakeTime || ns.quality){
+      nightByDate[ds]=(nightByDate[ds]||[]).concat([{bedTime:ns.bedTime,wakeTime:ns.wakeTime,quality:ns.quality,dreamt:ns.dreamt,fromCurrent:false}]);
+    }
+    if(s.nap && s.nap.records && s.nap.records.length){
+      napByDate[ds]=(napByDate[ds]||[]).concat(s.nap.records);
+    }
+  });
+  const allDates = Array.from(new Set([...Object.keys(napByDate),...Object.keys(nightByDate)])).sort().reverse();
+  if(!allDates.length){
+    return '<div class="empty-state" style="padding:14px;"><span class="emoji">📋</span>本月暂无睡眠记录</div>';
+  }
+  const isOpen = (ds)=> !!State.collapse.sleepMonthOpen[ds];
+  return allDates.map(ds=>{
+    const naps = napByDate[ds]||[];
+    const nights = nightByDate[ds]||[];
+    const open = isOpen(ds);
+    return `
+      <div class="month-row ${open?'open':''}" data-sleep-month-row="${ds}">
+        <div class="month-head">
+          <span>${ds.slice(5)}（${Utils.weekdayCN(ds)}）</span>
+          <span class="count">午睡 ${naps.length} · 夜间 ${nights.length}</span>
+        </div>
+        <div class="month-detail">
+          ${nights.length?`<div style="margin-bottom:6px;"><b style="color:var(--primary-pink);">🌙 夜间睡眠</b>${nights.map(r=>`<div style="font-size:12px;padding:3px 6px;background:#fff;border-radius:8px;margin-top:3px;">${r.bedTime||'--'}~${r.wakeTime||'--'} ${r.quality?('⭐'.repeat(r.quality)):''} ${r.dreamt?'💭':''}</div>`).join('')}</div>`:''}
+          ${naps.length?`<div><b style="color:var(--sunflower);">☀️ 午睡</b>${naps.map(r=>`<div style="font-size:12px;padding:3px 6px;background:#fff;border-radius:8px;margin-top:3px;">${r.bedTime||'--'}~${r.wakeTime||'--'}</div>`).join('')}</div>`:''}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 /* —— 身心成长保存函数 —— */
 function saveSleep(d){
   const day=Store.getDay(d);
   const old=day.bodyMind.sleep;
+  const nightSleep = Object.assign({}, old.nightSleep||{});
+  nightSleep.bedTime=val('sleep-bed');
+  nightSleep.wakeTime=val('sleep-wake');
+  nightSleep.dreamt=document.getElementById('sleep-dream').checked;
+  // quality 由按钮事件控制
   day.bodyMind.sleep={
-    bedTime:val('sleep-bed'), wakeTime:val('sleep-wake'),
-    quality:old.quality, dreamt:document.getElementById('sleep-dream').checked,
-    records:old.records||[]
+    nap: old.nap || {records:[]},
+    nightSleep
   };
   Store.saveDayModule(d,'bodyMind',day.bodyMind);
   Utils.toast('已保存~ 💤');
 }
-function renderSleepMonthPie(d){
-  const month=d.slice(0,7);
+function renderSleepMonthPie(d, month){
+  month = month || d.slice(0,7);
   const data=Store._read().byDate;
   let q1=0,q2=0,q3=0;
   Object.keys(data).forEach(ds=>{
     if(ds.startsWith(month)){
       const s=data[ds]?.bodyMind?.sleep;
       if(s){
-        if(s.quality===1)q1++;
-        if(s.quality===2)q2++;
-        if(s.quality===3)q3++;
+        const ns = s.nightSleep || {};
+        if(ns.quality===1)q1++;
+        if(ns.quality===2)q2++;
+        if(ns.quality===3)q3++;
+        (ns.records||[]).forEach(r=>{
+          if(r.quality===1)q1++; if(r.quality===2)q2++; if(r.quality===3)q3++;
+        });
       }
-      (s?.records||[]).forEach(r=>{
-        if(r.quality===1)q1++; if(r.quality===2)q2++; if(r.quality===3)q3++;
-      });
     }
   });
   renderPie('sleep-month-pie',['⭐ 差','⭐⭐ 一般','⭐⭐⭐ 好'],[q1,q2,q3],['#FF9999','#FFD93D','#A8E6CF']);
@@ -1613,14 +2027,17 @@ function saveDiet(d){
   Store.saveDayModule(d,'bodyMind',day.bodyMind);
   Utils.toast('已保存~ 🍱');
 }
+function addDrinkItem(d){
+  const day=Store.getDay(d);
+  if(!day.bodyMind.drink) day.bodyMind.drink={items:[]};
+  if(!day.bodyMind.drink.items) day.bodyMind.drink.items=[];
+  day.bodyMind.drink.items.push({id:Utils.uid(),time:'',amount:'',detail:''});
+  Store.saveDayModule(d,'bodyMind',day.bodyMind);
+  State.render();
+}
 function saveDrink(d){
   const day=Store.getDay(d);
-  day.bodyMind.drink={
-    takeoutTea:document.getElementById('drink-tea').checked,
-    takeoutCoffee:document.getElementById('drink-coffee').checked,
-    diy:document.getElementById('drink-diy').checked,
-    detail:val('drink-detail')
-  };
+  // items 字段已通过 change 事件实时保存
   Store.saveDayModule(d,'bodyMind',day.bodyMind);
   Utils.toast('已保存~ ☕');
 }
@@ -1631,10 +2048,23 @@ function renderDrinkMonthPie(){
   Object.keys(data).forEach(ds=>{
     if(ds.startsWith(month)){
       const dr=data[ds]?.bodyMind?.drink;
-      if(dr){ if(dr.takeoutTea)tea++; if(dr.takeoutCoffee)coffee++; if(dr.diy)diy++; }
+      if(dr){
+        // 兼容新旧数据
+        if(dr.takeoutTea)tea++;
+        if(dr.takeoutCoffee)coffee++;
+        if(dr.diy)diy++;
+        if(dr.items && dr.items.length){
+          dr.items.forEach(it=>{
+            const text=(it.detail||'').toLowerCase();
+            if(/咖啡|coffee/.test(text)) coffee++;
+            else if(/茶|tea/.test(text)) tea++;
+            else if(/diy|自制|手冲/.test(text)) diy++;
+          });
+        }
+      }
     }
   });
-  renderPie('drink-month-pie',['外购茶饮','外购咖啡','DIY'],[tea,coffee,diy],['#FF6B9D','#FFD93D','#FFC4D6']);
+  renderPie('drink-month-pie',['茶饮','咖啡','DIY'],[tea,coffee,diy],['#FF6B9D','#FFD93D','#FFC4D6']);
 }
 function changeDrinkMonth(delta){
   const [y,m]=State.drinkMonth.split('-').map(Number);
@@ -1741,22 +2171,60 @@ function renderReadingQueue(){
   const todayDone=rq.items.filter(i=>i.starred).length;
   const todayTotal=rq.items.length;
 
+  // 跨日聚合：所有 starred=false 的项目
   const allData=Store._read().byDate;
-  let histTotal=0,histDone=0;
+  const histUndone=[];
   Object.keys(allData).forEach(ds=>{
-    const items=allData[ds]?.readingQueue?.items||[];
-    items.forEach(i=>{ histTotal++; if(i.starred) histDone++; });
+    const items=(allData[ds]?.readingQueue?.items)||[];
+    items.forEach(it=>{
+      if(!it.starred){
+        histUndone.push({date:ds, ...it});
+      }
+    });
   });
+  // 按时间倒序
+  histUndone.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 
   const vc=document.getElementById('view-container');
+  const isOpen = State.collapse.readingHistory;
   vc.innerHTML=`
     <div class="card" style="text-align:center;">
       <div style="font-size:13px;color:var(--text-sub);margin-bottom:6px;">${Utils.fullDateCN(d)}</div>
       <div style="display:flex;justify-content:space-around;">
         <div><div class="stat-num">${todayDone}</div><div class="stat-label">今日完成/${todayTotal}</div></div>
-        <div><div class="stat-num" style="color:#FFD93D;">${histTotal?Math.round(histDone/histTotal*100):0}%</div><div class="stat-label">历史完成度</div></div>
+        <div><div class="stat-num" style="color:#FFD93D;">${histUndone.length}</div><div class="stat-label">历史未完成</div></div>
       </div>
     </div>
+
+    <!-- 历史待阅清单（默认折叠） -->
+    <div class="card">
+      <div class="collapse-head ${isOpen?'open':''}" data-collapse="readingHistory">
+        <div class="card-title" style="margin:0;">
+          <span class="emoji">📚</span>历史待阅清单
+        </div>
+        <div>
+          <span class="time-tag" style="font-size:12px;">${histUndone.length} 项</span>
+          <span class="arrow">▶</span>
+        </div>
+      </div>
+      <div class="collapse-body ${isOpen?'open':''}">
+        <div id="rq-history-list" style="margin-top:8px;">
+          ${histUndone.length?histUndone.map(it=>`
+            <div class="list-item-card ${it.starred?'starred':''}" style="margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:20px;cursor:pointer;" data-rq-star-global="${it.id}">${it.starred?'⭐':'☆'}</span>
+                <span style="font-size:12px;color:var(--text-sub);">${it.date.slice(5)}</span>
+                <span style="flex:1;font-weight:600;${it.starred?'color:var(--text-sub);text-decoration:line-through;':''}">${Utils.esc(it.title)}</span>
+                <button class="del-time" data-rq-del-global="${it.id}" style="font-size:16px;flex-shrink:0;">✕</button>
+              </div>
+              ${it.ddl?`<div style="font-size:12px;color:var(--text-sub);">⏰ DDL: ${it.ddl}</div>`:''}
+            </div>
+          `).join(''):'<div class="empty-state" style="padding:14px;"><span class="emoji">📭</span>历史已无未完成项目</div>'}
+        </div>
+      </div>
+    </div>
+
+    <!-- 当日待阅清单 -->
     <div class="card">
       <div class="card-title"><span class="emoji">📚</span>待阅清单</div>
       <div id="rq-list">
@@ -1781,7 +2249,7 @@ function renderReadingQueue(){
                   <option value="其他" ${it.platform==='其他'?'selected':''}>其他</option>
                 </select>
               </div>
-              <input type="date" class="input-date" value="${it.ddl||''}" data-rq-ddl="${i}" style="flex-shrink:0;">
+              <input type="date" class="input-date" value="${it.ddl||''}" data-rq-ddl="${i}" placeholder="DDL" style="flex:1;max-width:160px;">
             </div>
             ${it.platform==='其他'?`<div class="field" style="margin-bottom:6px;"><input type="text" class="input" value="${Utils.esc(it.platformOther||'')}" data-rq-platform-other="${i}" placeholder="平台名称"></div>`:''}
             ${it.starred&&it.completedDate?`<div style="font-size:12px;color:var(--primary-pink);">✅ 完成于 ${it.completedDate}</div>`:''}
@@ -1838,11 +2306,11 @@ function renderInspiration(){
             <div class="detail-panel">
               <div class="field-row" style="margin-bottom:6px;gap:8px;">
                 <div style="flex:1;min-width:0;">
-                  <input type="date" class="input-date" value="${startDate}" data-ins-start="${i}" style="width:100%;">
+                  <input type="date" class="input-date" value="${startDate}" data-ins-start="${i}" placeholder="想法日期" style="width:100%;">
                   <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">📅 想法日期</div>
                 </div>
                 <div style="flex:1;min-width:0;">
-                  <input type="date" class="input-date" value="${realDate}" data-ins-real="${i}" style="width:100%;">
+                  <input type="date" class="input-date" value="${realDate}" data-ins-real="${i}" placeholder="落成时间" style="width:100%;">
                   <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">🌟 落成时间</div>
                 </div>
               </div>
@@ -1904,7 +2372,7 @@ function renderReflection(){
         ${rf.items.length?rf.items.map((it,i)=>`
           <div class="list-item-card">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-              <input type="datetime-local" class="input-time" value="${it.time||''}" data-rf-time="${i}" style="max-width:200px;font-size:12px;">
+              <input type="datetime-local" class="input-time" value="${it.time||''}" data-rf-time="${i}" placeholder="记录时间" style="max-width:200px;font-size:12px;">
               <span style="font-size:11px;color:var(--text-sub);">📝 记录时间</span>
             </div>
             <div class="rf-text-wrap" data-rf-idx="${i}">
@@ -1923,7 +2391,7 @@ function renderReflection(){
     <div class="card">
       <div class="card-title"><span class="emoji">➕</span>添加碎碎念</div>
       <div class="field" style="margin-bottom:8px;">
-        <input type="datetime-local" class="input-time" id="rf-new-time" style="max-width:200px;margin-bottom:6px;font-size:12px;">
+        <input type="datetime-local" class="input-time" id="rf-new-time" placeholder="记录时间" style="max-width:200px;margin-bottom:6px;font-size:12px;">
       </div>
       <div class="field" style="margin-bottom:8px;">
         <textarea class="textarea" id="rf-new" placeholder="写点什么" style="min-height:120px;"></textarea>
@@ -1987,11 +2455,11 @@ function renderPlanPage(type,label,emoji,range){
             <div class="detail-panel">
               <div class="field-row" style="margin-bottom:6px;gap:8px;">
                 <div style="flex:1;min-width:0;">
-                  <input type="date" class="input-date" value="${p.planDate||''}" data-plan-date="${p.id}" style="width:100%;">
+                  <input type="date" class="input-date" value="${p.planDate||''}" data-plan-date="${p.id}" placeholder="计划日期" style="width:100%;">
                   <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">📅 计划时间</div>
                 </div>
                 <div style="flex:1;min-width:0;">
-                  <input type="date" class="input-date" value="${p.realizeDate||''}" data-plan-real="${p.id}" style="width:100%;">
+                  <input type="date" class="input-date" value="${p.realizeDate||''}" data-plan-real="${p.id}" placeholder="实现日期" style="width:100%;">
                   <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">🌟 实现日期</div>
                 </div>
               </div>
@@ -2043,7 +2511,29 @@ function renderSettings(){
   const vc=document.getElementById('view-container');
   const data=Store._read();
   const dataCount=Object.keys(data.byDate||{}).length;
+  const customIcon = Store.getCustomIcon();
   vc.innerHTML=`
+    <div class="card">
+      <div class="card-title"><span class="emoji">🖼️</span>主屏图标</div>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:10px;">上传图片后，iPhone 添加到主屏时将显示该图标。已上传：${customIcon?'是':'使用默认'}</p>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <div style="width:60px;height:60px;border-radius:14px;background:var(--bg-pink);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1.5px solid var(--primary-light);">
+          <img id="icon-preview" src="${customIcon||'icon.png'}" style="width:100%;height:100%;object-fit:cover;${customIcon?'':'display:none;'}">
+          ${customIcon?'':'<span style="font-size:24px;">🌸</span>'}
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+          <label class="btn btn-outline" style="display:inline-block;text-align:center;cursor:pointer;">
+            📤 上传图片
+            <input type="file" id="icon-upload" accept="image/*" style="display:none;">
+          </label>
+          ${customIcon?`<button class="btn btn-sm btn-danger" onclick="resetCustomIcon()">🗑️ 恢复默认</button>`:''}
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-sub);background:var(--bg-pink);padding:8px;border-radius:8px;">
+        💡 建议正方形 PNG/JPG，至少 180×180 像素。设置后下次打开仍会保留。
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title"><span class="emoji">💾</span>数据备份</div>
       <p style="font-size:13px;color:var(--text-sub);margin-bottom:10px;">所有数据存储在本地浏览器中，建议定期导出备份，防止清缓存或换手机丢失。</p>
@@ -2061,7 +2551,7 @@ function renderSettings(){
     <div class="card">
       <div class="card-title"><span class="emoji">ℹ️</span>关于</div>
       <p style="font-size:13px;color:var(--text-sub);line-height:1.8;">
-        🌸 我的工作台 v1.0<br>
+        🌸 我的工作台 v2.0<br>
         · 数据完全本地存储，离线可用<br>
         · iPhone 使用：Safari 打开 → 分享 → 添加到主屏幕<br>
         · 支持每日重置、历史查阅、数据备份<br>
@@ -2074,6 +2564,53 @@ function renderSettings(){
       <button class="btn btn-danger" style="width:100%;" onclick="clearAllData()">🗑️ 清空所有数据</button>
     </div>
   `;
+  // 绑定上传
+  const up=document.getElementById('icon-upload');
+  if(up){
+    up.addEventListener('change',(e)=>{
+      const file=e.target.files&&e.target.files[0];
+      if(!file) return;
+      const reader=new FileReader();
+      reader.onload=(ev)=>{
+        const dataUrl=ev.target.result;
+        // 压缩到 ~512x512 以节省 localStorage
+        compressImage(dataUrl, 512, (compressed)=>{
+          Store.setCustomIcon(compressed);
+          Utils.toast('图标已更新 ✨');
+          State.render();
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
+function resetCustomIcon(){
+  if(!confirm('恢复默认主屏图标？')) return;
+  Store.setCustomIcon(null);
+  Utils.toast('已恢复默认');
+  State.render();
+}
+
+function compressImage(dataUrl, maxSize, cb){
+  const img=new Image();
+  img.onload=()=>{
+    let w=img.width, h=img.height;
+    if(Math.max(w,h)>maxSize){
+      if(w>=h){
+        h=Math.round(h*maxSize/w); w=maxSize;
+      }else{
+        w=Math.round(w*maxSize/h); h=maxSize;
+      }
+    }
+    const canvas=document.createElement('canvas');
+    canvas.width=w; canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    cb(canvas.toDataURL('image/png', 0.9));
+  };
+  img.onerror=()=>{ cb(dataUrl); };
+  img.src=dataUrl;
 }
 
 function exportData(){
@@ -2152,15 +2689,29 @@ function init(){
     if(!document.hidden) State.checkDayRollover();
   });
 
-  // ===== 全局事件委托（持久绑定，解决once失效问题）=====
+  // ===== 全局事件委托（持久绑定）=====
   const vc=document.getElementById('view-container');
 
   // 点击事件统一处理
   vc.addEventListener('click',(e)=>{
     const d=State.currentDate;
 
+    // 折叠区域（历史种草/历史待阅/历史睡眠）
+    const colHead=e.target.closest('.collapse-head');
+    if(colHead){
+      const key=colHead.dataset.collapse;
+      if(key){
+        State.collapse[key] = !State.collapse[key];
+        colHead.classList.toggle('open', State.collapse[key]);
+        const body=colHead.nextElementSibling;
+        if(body && body.classList.contains('collapse-body')){
+          body.classList.toggle('open', State.collapse[key]);
+        }
+      }
+      return;
+    }
+
     // ===== 日计划 =====
-    // 点击太阳花或标签 → toggle done
     const sunflower=e.target.closest('.sunflower');
     const itemLabel=e.target.closest('.item-label');
     if(sunflower||itemLabel){
@@ -2226,20 +2777,26 @@ function init(){
       return;
     }
 
-    // 种草添置：删除
-    const wlDel=e.target.closest('[data-wl-del]');
-    if(wlDel){
-      const i=parseInt(wlDel.dataset.wlDel);
-      if(confirm('删除这项吗？')){
-        const day=Store.getDay(d);
-        day.wishlist.items.splice(i,1);
-        Store.saveDayModule(d,'wishlist',day.wishlist);
+    // 种草（按全局 id 查找跨日条目）
+    const wlDelGlobal=e.target.closest('[data-wl-del-global]');
+    if(wlDelGlobal){
+      const id=wlDelGlobal.dataset.wlDelGlobal;
+      if(confirm('删除这项种草吗？')){
+        const data=Store._read();
+        Object.keys(data.byDate).forEach(ds=>{
+          const items=data.byDate[ds]?.wishlist?.items||[];
+          const idx=items.findIndex(i=>i.id===id);
+          if(idx>-1){
+            items.splice(idx,1);
+            Store.saveDayModule(ds,'wishlist',{items});
+          }
+        });
         State.render();
       }
       return;
     }
 
-    // 排队待阅：星标切换
+    // 排队待阅：星标切换（按 idx 当日）
     const rqStar=e.target.closest('[data-rq-star]');
     if(rqStar){
       const i=parseInt(rqStar.dataset.rqStar);
@@ -2255,6 +2812,27 @@ function init(){
       State.render();
       return;
     }
+    // 排队待阅：星标切换（按全局 id 跨日）
+    const rqStarGlobal=e.target.closest('[data-rq-star-global]');
+    if(rqStarGlobal){
+      const id=rqStarGlobal.dataset.rqStarGlobal;
+      const data=Store._read();
+      Object.keys(data.byDate).forEach(ds=>{
+        const items=data.byDate[ds]?.readingQueue?.items||[];
+        const item=items.find(i=>i.id===id);
+        if(item){
+          item.starred=!item.starred;
+          if(item.starred){
+            const now=new Date();
+            const pad=n=>String(n).padStart(2,'0');
+            item.completedDate=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+          }else{ item.completedDate=null; }
+          Store.saveDayModule(ds,'readingQueue',{items});
+        }
+      });
+      State.render();
+      return;
+    }
     // 排队待阅：删除
     const rqDel=e.target.closest('[data-rq-del]');
     if(rqDel){
@@ -2263,6 +2841,24 @@ function init(){
         const day=Store.getDay(d);
         day.readingQueue.items.splice(i,1);
         Store.saveDayModule(d,'readingQueue',day.readingQueue);
+        State.render();
+      }
+      return;
+    }
+    // 排队待阅：跨日删除
+    const rqDelGlobal=e.target.closest('[data-rq-del-global]');
+    if(rqDelGlobal){
+      const id=rqDelGlobal.dataset.rqDelGlobal;
+      if(confirm('删除这项待阅吗？')){
+        const data=Store._read();
+        Object.keys(data.byDate).forEach(ds=>{
+          const items=data.byDate[ds]?.readingQueue?.items||[];
+          const idx=items.findIndex(i=>i.id===id);
+          if(idx>-1){
+            items.splice(idx,1);
+            Store.saveDayModule(ds,'readingQueue',{items});
+          }
+        });
         State.render();
       }
       return;
@@ -2324,7 +2920,6 @@ function init(){
     // 周月年计划：删除
     const planDel=e.target.closest('[data-plan-del]');
     if(planDel){
-      // 找出当前计划类型
       const type={weekly:'weekly',monthly:'monthly',yearly:'yearly'}[State.route.replace('#','')];
       if(type && confirm('删除这个计划吗？')){
         const arr=Store.getPlans(type).filter(p=>p.id!==planDel.dataset.planDel);
@@ -2335,22 +2930,28 @@ function init(){
     }
   });
 
-  // change 事件统一处理（输入框失焦保存）
+  // change 事件统一处理
   vc.addEventListener('change',(e)=>{
     const d=State.currentDate;
     const t=e.target;
 
-    // 种草添置 checkbox
-    if(t.dataset.wlCheck!==undefined){
-      const i=parseInt(t.dataset.wlCheck);
-      const day=Store.getDay(d);
-      day.wishlist.items[i].done=t.checked;
-      Store.saveDayModule(d,'wishlist',day.wishlist);
+    // 种草勾选（按全局 id 跨日）
+    if(t.dataset.wlCheckGlobal!==undefined){
+      const id=t.dataset.wlCheckGlobal;
+      const data=Store._read();
+      Object.keys(data.byDate).forEach(ds=>{
+        const items=data.byDate[ds]?.wishlist?.items||[];
+        const item=items.find(i=>i.id===id);
+        if(item){
+          item.done=t.checked;
+          Store.saveDayModule(ds,'wishlist',{items});
+        }
+      });
       State.render();
       return;
     }
 
-    // 排队待阅 URL/DDD/平台
+    // 排队待阅 URL/DDL/平台
     if(t.dataset.rqUrl!==undefined){
       const i=parseInt(t.dataset.rqUrl);
       const day=Store.getDay(d);
