@@ -5,7 +5,7 @@
 <script>
 /* ========== 版本号强制刷新：解决 iPhone 主屏/Safari 缓存问题 ========== */
 (function(){
-  const APP_VERSION='20260805-3';
+  const APP_VERSION='20260805-4';
   try{
     const url=new URL(location.href);
     const current=url.searchParams.get('v');
@@ -429,8 +429,8 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;}
   position:relative;width:100%;max-width:100%;
 }
 .chart-container.small{height:130px;}
-.chart-container.medium{height:190px;}
-.chart-container.large{height:230px;}
+.chart-container.medium{height:165px;}
+.chart-container.large{height:210px;}
 .chart-container canvas{max-width:100%;}
 
 /* 开关 */
@@ -523,14 +523,22 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;}
 .datetime-input-wrap input.empty + .datetime-placeholder{
   display:flex;
 }
+/* 有值时强制隐藏占位符，避免重叠覆盖 */
+.date-input-wrap input:not([value=""]) + .date-placeholder,
+.datetime-input-wrap input:not([value=""]) + .datetime-placeholder{
+  display:none;
+}
 .date-placeholder,.datetime-placeholder{
-  position:absolute;left:34px;top:50%;transform:translateY(-50%);
+  position:absolute;left:10px;top:50%;transform:translateY(-50%);
   color:#D4B5BA;font-size:13px;pointer-events:none;z-index:2;
   display:none;align-items:center;gap:4px;
   font-family:-apple-system,"PingFang SC","Noto Sans SC","Helvetica Neue",sans-serif;
 }
 .date-input-wrap input.empty,.datetime-input-wrap input.empty{color:transparent;}
 .date-input-wrap input:not(.empty),.datetime-input-wrap input:not(.empty){color:var(--text-main);}
+/* 有值时确保文字可见 */
+.date-input-wrap input:not([value=""]),
+.datetime-input-wrap input:not([value=""]){color:var(--text-main);}
 .input-date:invalid + .date-placeholder{display:flex;}
 .input-time:invalid + .datetime-placeholder{display:flex;}
 
@@ -1566,10 +1574,11 @@ function bmBack(){
 
 function renderBodyMindSub(sub){
   const d=State.currentDate;
-  // 初始化月份
-  if(sub.id==='drink' && !State.drinkMonth) State.drinkMonth=d.slice(0,7);
-  if(sub.id==='bodyData' && !State.bodyMonth) State.bodyMonth=d.slice(0,7);
-  if(sub.id==='sleep' && !State.sleepMonth) State.sleepMonth=d.slice(0,7);
+  // 初始化月份（并校验非法/过期月份，防止老数据污染显示）
+  const validMonth = (m)=> /^20\d{2}-(0[1-9]|1[0-2])$/.test(m) && parseInt(m.split('-')[0]) >= 2000 && parseInt(m.split('-')[0]) <= 2100;
+  if(sub.id==='drink' && (!State.drinkMonth || !validMonth(State.drinkMonth))) State.drinkMonth=d.slice(0,7);
+  if(sub.id==='bodyData' && (!State.bodyMonth || !validMonth(State.bodyMonth))) State.bodyMonth=d.slice(0,7);
+  if(sub.id==='sleep' && (!State.sleepMonth || !validMonth(State.sleepMonth))) State.sleepMonth=d.slice(0,7);
 
   const day=Store.getDay(d);
   const bm=day.bodyMind[sub.id];
@@ -1625,10 +1634,10 @@ function renderBodyMindSub(sub){
                 <input type="time" class="input-time" id="nap-wake" value="${nap.wakeTime||''}" placeholder="醒来时间" style="width:100%;">
               </div>
             </div>
-            <div class="field" style="margin-bottom:6px;">
-              <div style="font-size:11px;color:var(--text-sub);margin-bottom:3px;">睡眠质量</div>
-              <div style="display:flex;gap:4px;">
-                ${[1,2,3].map(n=>`<button class="btn btn-sm ${nap.quality===n?'':'btn-outline'}" data-nap-q="${n}" style="flex:1;font-size:12px;padding:5px 4px;">${'⭐'.repeat(n)}</button>`).join('')}
+            <div class="field" style="margin-bottom:4px;">
+              <div style="font-size:11px;color:var(--text-sub);margin-bottom:4px;">睡眠质量</div>
+              <div style="display:flex;gap:6px;">
+                ${[1,2,3].map(n=>`<button class="btn btn-sm ${nap.quality===n?'':'btn-outline'}" data-nap-q="${n}" style="flex:1;font-size:13px;padding:7px 4px;border-radius:12px;">${'⭐'.repeat(n)}</button>`).join('')}
               </div>
             </div>
           </div>
@@ -1645,13 +1654,13 @@ function renderBodyMindSub(sub){
                 <input type="time" class="input-time" id="sleep-wake" value="${ns.wakeTime||''}" placeholder="醒来时间" style="width:100%;">
               </div>
             </div>
-            <div class="field" style="margin-bottom:6px;">
-              <div style="font-size:11px;color:var(--text-sub);margin-bottom:3px;">睡眠质量</div>
-              <div style="display:flex;gap:4px;">
-                ${[1,2,3].map(n=>`<button class="btn btn-sm ${ns.quality===n?'':'btn-outline'}" data-sleep-q="${n}" style="flex:1;font-size:12px;padding:5px 4px;">${'⭐'.repeat(n)}</button>`).join('')}
+            <div class="field" style="margin-bottom:4px;">
+              <div style="font-size:11px;color:var(--text-sub);margin-bottom:4px;">睡眠质量</div>
+              <div style="display:flex;gap:6px;">
+                ${[1,2,3].map(n=>`<button class="btn btn-sm ${ns.quality===n?'':'btn-outline'}" data-sleep-q="${n}" style="flex:1;font-size:13px;padding:7px 4px;border-radius:12px;">${'⭐'.repeat(n)}</button>`).join('')}
               </div>
             </div>
-            <label class="checkbox-wrap" style="font-size:12px;"><input type="checkbox" id="sleep-dream" ${ns.dreamt?'checked':''}> 💭 做梦</label>
+            <label class="checkbox-wrap" style="font-size:12px;margin-top:4px;"><input type="checkbox" id="sleep-dream" ${ns.dreamt?'checked':''}> 💭 做梦</label>
           </div>
         </div>
 
@@ -1857,24 +1866,26 @@ function renderBodyMindSub(sub){
         <div class="card-title"><span class="emoji">🏥</span>就医复盘</div>
         <div id="med-list">
           ${bm.records.length?bm.records.map((r,i)=>`
-            <div class="list-item-card" style="margin-bottom:8px;">
-              <div class="field-row" style="margin-bottom:6px;gap:6px;">
-                <div class="date-input-wrap" style="flex:1 1 130px;">
-                  <input type="date" class="input-date empty" value="${r.date||''}" data-med-date="${i}" placeholder="记录日期" style="width:100%;">
+            <div class="list-item-card" style="margin-bottom:10px;padding:12px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <div class="date-input-wrap" style="flex:0 0 125px;min-width:125px;">
+                  <input type="date" class="input-date empty" value="${r.date||''}" data-med-date="${i}" placeholder="记录日期" style="width:100%;padding-left:10px;">
                   <span class="date-placeholder">yyyy-mm-dd</span>
                 </div>
-                <input type="text" class="input" value="${Utils.esc(r.diagnosis)}" data-med-diag="${i}" placeholder="确诊疾病" style="flex:2 1 140px;min-width:0;">
-                <button class="del-time" data-med-del="${i}" style="font-size:16px;flex-shrink:0;">✕</button>
+                <input type="text" class="input" value="${Utils.esc(r.diagnosis)}" data-med-diag="${i}" placeholder="确诊疾病" style="flex:1;min-width:0;">
+                <button class="del-time" data-med-del="${i}" style="font-size:18px;flex-shrink:0;width:28px;text-align:center;">✕</button>
               </div>
-              <div class="field-row" style="margin-bottom:6px;">
-                <input type="text" class="input" value="${Utils.esc(r.duration||'')}" data-med-dur="${i}" placeholder="历时（如3天）" style="flex:1;min-width:0;">
+              <div style="margin-bottom:8px;">
+                <input type="text" class="input" value="${Utils.esc(r.duration||'')}" data-med-dur="${i}" placeholder="历时（如3天）" style="width:100%;">
               </div>
               <textarea class="textarea" data-med-detail="${i}" placeholder="详情">${Utils.esc(r.detail||'')}</textarea>
             </div>
           `).join(''):'<div class="empty-state"><span class="emoji">🏥</span>暂无就医记录</div>'}
         </div>
-        <button class="btn btn-sm btn-outline" style="margin-top:8px;width:100%;" onclick="addMedical('${d}')">➕ 添加记录</button>
-        <button class="btn" style="margin-top:8px;width:100%;" onclick="saveMedical('${d}')">💾 保存</button>
+        <div style="display:flex;gap:10px;margin-top:10px;">
+          <button class="btn btn-sm btn-outline" style="flex:1;" onclick="addMedical('${d}')">➕ 添加记录</button>
+          <button class="btn" style="flex:1.5;" onclick="saveMedical('${d}')">💾 保存</button>
+        </div>
       </div>
     `;
   }
@@ -1907,7 +1918,8 @@ function renderBodyMindSub(sub){
     const sm=e.target.closest('[data-sleep-month]');
     if(sm){
       const delta=parseInt(sm.dataset.sleepMonth);
-      const [y,m]=State.sleepMonth.split('-').map(Number);
+      let [y,m]=State.sleepMonth.split('-').map(Number);
+      if(!y || !m || y<2000 || y>2100){ y=parseInt(d.slice(0,4)); m=parseInt(d.slice(5,7)); }
       const nd=new Date(y,m-1+delta,1);
       State.sleepMonth=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}`;
       State.render();
@@ -2124,13 +2136,17 @@ function renderDrinkMonthPie(){
   renderPie('drink-month-pie',['茶饮','咖啡','DIY'],[tea,coffee,diy],['#FF6B9D','#FFD93D','#FFC4D6']);
 }
 function changeDrinkMonth(delta){
-  const [y,m]=State.drinkMonth.split('-').map(Number);
+  let [y,m]=State.drinkMonth.split('-').map(Number);
+  const today=Utils.todayStr();
+  if(!y || !m || y<2000 || y>2100){ y=parseInt(today.slice(0,4)); m=parseInt(today.slice(5,7)); }
   const nd=new Date(y,m-1+delta,1);
   State.drinkMonth=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}`;
   State.render();
 }
 function changeBodyMonth(delta){
-  const [y,m]=State.bodyMonth.split('-').map(Number);
+  let [y,m]=State.bodyMonth.split('-').map(Number);
+  const today=Utils.todayStr();
+  if(!y || !m || y<2000 || y>2100){ y=parseInt(today.slice(0,4)); m=parseInt(today.slice(5,7)); }
   const nd=new Date(y,m-1+delta,1);
   State.bodyMonth=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}`;
   State.render();
@@ -2295,8 +2311,8 @@ function renderReadingQueue(){
             <div class="field" style="margin-bottom:6px;">
               <textarea class="textarea" data-rq-url="${i}" placeholder="🔗 链接" style="min-height:60px;font-size:13px;">${Utils.esc(it.url||'')}</textarea>
             </div>
-            <div class="field-row" style="margin-bottom:6px;gap:8px;">
-              <div style="flex:1;min-width:0;">
+            <div class="field-row" style="margin-bottom:8px;gap:10px;">
+              <div style="flex:1.1;min-width:0;">
                 <select class="select" data-rq-platform="${i}" style="width:100%;">
                   <option value="">平台</option>
                   <option value="小红书" ${it.platform==='小红书'?'selected':''}>小红书</option>
@@ -2306,8 +2322,8 @@ function renderReadingQueue(){
                   <option value="其他" ${it.platform==='其他'?'selected':''}>其他</option>
                 </select>
               </div>
-              <div class="date-input-wrap" style="flex:1;max-width:160px;">
-                <input type="date" class="input-date empty" value="${it.ddl||''}" data-rq-ddl="${i}" placeholder="DDL" style="width:100%;">
+              <div class="date-input-wrap" style="flex:1;min-width:135px;max-width:170px;">
+                <input type="date" class="input-date empty" value="${it.ddl||''}" data-rq-ddl="${i}" placeholder="DDL" style="width:100%;padding-left:10px;">
                 <span class="date-placeholder">yyyy-mm-dd</span>
               </div>
             </div>
@@ -2363,14 +2379,14 @@ function renderInspiration(){
               <span style="flex:1;font-weight:600;">${Utils.esc(it.text)}</span>
               <button class="del-time" data-ins-del="${i}" style="font-size:16px;flex-shrink:0;">✕</button>
             </div>
-            <div class="detail-panel">
-              <div class="field-row" style="margin-bottom:6px;gap:8px;">
+              <div class="detail-panel">
+              <div class="field-row" style="margin-bottom:8px;gap:10px;">
                 <div class="date-input-wrap" style="flex:1;min-width:0;">
-                  <input type="date" class="input-date empty" value="${startDate}" data-ins-start="${i}" placeholder="想法日期" style="width:100%;">
+                  <input type="date" class="input-date empty" value="${startDate}" data-ins-start="${i}" placeholder="想法日期" style="width:100%;padding-left:10px;">
                   <span class="date-placeholder">yyyy-mm-dd</span>
                 </div>
                 <div class="date-input-wrap" style="flex:1;min-width:0;">
-                  <input type="date" class="input-date empty" value="${realDate}" data-ins-real="${i}" placeholder="落成时间" style="width:100%;">
+                  <input type="date" class="input-date empty" value="${realDate}" data-ins-real="${i}" placeholder="落成时间" style="width:100%;padding-left:10px;">
                   <span class="date-placeholder">yyyy-mm-dd</span>
                 </div>
               </div>
@@ -2519,13 +2535,13 @@ function renderPlanPage(type,label,emoji,range){
               <button class="del-time" data-plan-del="${p.id}" style="font-size:16px;">✕</button>
             </div>
             <div class="detail-panel">
-              <div class="field-row" style="margin-bottom:6px;gap:8px;">
+              <div class="field-row" style="margin-bottom:8px;gap:10px;">
                 <div class="date-input-wrap" style="flex:1;min-width:0;">
-                  <input type="date" class="input-date empty" value="${p.planDate||''}" data-plan-date="${p.id}" placeholder="计划日期" style="width:100%;">
+                  <input type="date" class="input-date empty" value="${p.planDate||''}" data-plan-date="${p.id}" placeholder="计划日期" style="width:100%;padding-left:10px;">
                   <span class="date-placeholder">yyyy-mm-dd</span>
                 </div>
                 <div class="date-input-wrap" style="flex:1;min-width:0;">
-                  <input type="date" class="input-date empty" value="${p.realizeDate||''}" data-plan-real="${p.id}" placeholder="实现日期" style="width:100%;">
+                  <input type="date" class="input-date empty" value="${p.realizeDate||''}" data-plan-real="${p.id}" placeholder="实现日期" style="width:100%;padding-left:10px;">
                   <span class="date-placeholder">yyyy-mm-dd</span>
                 </div>
               </div>
@@ -3126,7 +3142,11 @@ function initDatePlaceholders(){
   const vc=document.getElementById('view-container');
   function update(el){
     if(!el) return;
-    el.classList.toggle('empty', !el.value);
+    const isEmpty=!el.value;
+    el.classList.toggle('empty', isEmpty);
+    // 同步 value 属性，使 CSS [value] 选择器反映真实值
+    if(isEmpty) el.setAttribute('value','');
+    else el.setAttribute('value', el.value);
   }
   vc.addEventListener('input',(e)=>{
     const t=e.target;
