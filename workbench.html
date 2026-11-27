@@ -599,6 +599,17 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;-webkit-appearance:
 .hint{font-size:11px;color:var(--text-light);margin-top:5px;line-height:1.5;}
 .field-label{font-size:11px;color:var(--text-sub);margin-bottom:3px;font-weight:600;}
 .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;}
+.field-grid>*{min-width:0;}
+.field-grid .field{min-width:0;}
+.field-grid input,.field-grid select,.field-grid textarea{width:100%;max-width:100%;min-width:0;box-sizing:border-box;}
+/* 日期时间控件（iOS 上原生控件会撑破栅格，必须单独约束） */
+.input-datetime,input[type="datetime-local"]{
+  width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+  padding:8px 10px;font-size:13px;border-radius:12px;
+  border:1.5px solid var(--primary-light);background:#fff;color:var(--text-main);
+  font-family:inherit;-webkit-appearance:none;appearance:none;
+}
+.input[readonly]{background:var(--bg-pink);color:var(--text-sub);cursor:default;}
 .field{margin-bottom:8px;}
 .field-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
 .add-box{display:flex;gap:6px;align-items:center;margin-top:8px;}
@@ -614,12 +625,54 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;-webkit-appearance:
 .diet-row .input{flex:1;min-width:0;}
 .sleep-block{background:var(--bg-pink);border-radius:12px;padding:11px;margin-bottom:10px;overflow:hidden;}
 .sleep-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;color:var(--primary-pink);font-size:13px;}
-.star-row{display:flex;gap:6px;}
-.star-row .btn{flex:1;padding:6px 3px;font-size:12px;}
+.star-row{display:flex;gap:6px;align-items:center;}
+.star-row .btn{flex:0 0 auto;min-width:0;padding:6px 10px;font-size:12px;border-radius:999px;line-height:1.2;letter-spacing:1.5px;}
 .poo-times{padding-left:28px;margin-top:6px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
 .template-block{margin-bottom:12px;}
 .range-val{color:var(--primary-pink);}
 .edit-input{max-width:100%;}
+
+/* ========== 多字段记录：草稿表单 + 保存按钮 ========== */
+.rec-form-card{
+  background:var(--card-bg);border:1.5px dashed var(--primary-light);border-radius:14px;
+  padding:13px 14px;margin-bottom:10px;
+}
+[data-theme="dark"] .rec-form-card{background:#332A30;border-color:#5A3B49;}
+.rec-form-card.sleep-block{background:var(--bg-pink);border-style:solid;padding:11px;}
+.rec-form-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.rec-form-title{font-size:13px;font-weight:600;color:var(--primary-pink);min-width:0;word-break:break-word;}
+.draft-dot{width:7px;height:7px;border-radius:50%;background:var(--sunflower);display:inline-block;flex:0 0 auto;}
+.btn-dim{opacity:.45;}
+.rec-row{border-color:rgba(255,196,214,.45);}
+.rec-summary{font-size:11px;color:var(--text-light);margin-top:5px;line-height:1.5;word-break:break-word;}
+.rec-count{font-size:11px;color:var(--text-light);margin-left:6px;font-weight:400;}
+.icon-btn.carried{background:#FFF3C4;border-color:var(--sunflower);color:#8A6700;}
+[data-theme="dark"] .icon-btn.carried{background:#5B4A20;color:#FFE79A;}
+.icon-btn[data-action="carry-open"]{font-size:15px;line-height:1;padding-bottom:1px;}
+.carry-badge.out{background:#F0EAF6;color:#6B4E8E;}
+[data-theme="dark"] .carry-badge.out{background:#40354F;color:#C9B6E8;}
+
+/* ========== 结转目标选择面板 ========== */
+#carry-modal{
+  position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.38);padding:18px;
+}
+#carry-modal.show{display:flex;}
+.carry-sheet{
+  background:var(--card-bg);border-radius:18px;padding:17px 16px;width:100%;max-width:380px;
+  box-shadow:var(--shadow-lg);max-height:86vh;overflow-y:auto;
+}
+.carry-title{font-size:15px;font-weight:600;color:var(--text-main);}
+.carry-sub{font-size:11.5px;color:var(--text-sub);margin:5px 0 12px;word-break:break-word;line-height:1.5;}
+.carry-opts{display:flex;flex-direction:column;gap:6px;max-height:46vh;overflow-y:auto;margin-bottom:12px;}
+.carry-opt{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  border:1px solid var(--primary-light);border-radius:10px;padding:9px 11px;font-size:13px;cursor:pointer;
+}
+.carry-opt.active{background:#FFF3C4;border-color:var(--sunflower);color:#8A6700;font-weight:600;}
+.carry-opt .co-sub{font-size:11px;color:var(--text-light);flex:0 0 auto;}
+.carry-opt.active .co-sub{color:#A0812B;}
+.carry-note{font-size:12.5px;color:var(--text-sub);margin-bottom:12px;line-height:1.6;}
 
 /* ========== 桌面自适应：常驻侧栏 + 双列内容 ========== */
 @media(min-width:900px){
@@ -641,6 +694,11 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;-webkit-appearance:
 }
 @media(min-width:1400px){ #view-container{max-width:1240px;} .sub-menu-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
 @media(max-width:899px){ .row-actions .icon-btn{width:24px;height:24px;} }
+/* 手机上双列栅格放不下日期时间控件，改为单列，避免观阅时间与类型重叠 */
+@media(max-width:430px){
+  .field-grid{grid-template-columns:1fr;}
+  .star-row .btn{font-size:15px;padding:7px 14px;}
+}
 
 /* ========== 趣味化：主题换装 ========== */
 [data-theme="sakura"]{--bg-pink:#FFF0F5;--card-bg:#FFFFFF;--text-main:#4A2E3A;--text-sub:#9B7B89;--text-light:#BFA7B1;--primary-light:#FFD9E4;--primary-pink:#F06292;--primary-dark:#C2185B;--sunflower:#FFB300;--sunflower-glow:#FFE082;--sunflower-dim:#E6C9A0;}
@@ -654,17 +712,17 @@ input[type=date],input[type=time]{min-width:0;max-width:100%;-webkit-appearance:
 
 /* ========== 情绪化头部 ========== */
 .mood-hero{
-  position:relative;overflow:hidden;border-radius:16px;padding:16px 18px;margin-top:8px;color:#fff;
+  position:relative;overflow:hidden;border-radius:16px;padding:14px 16px 15px;margin-top:8px;color:#fff;
   background:var(--hero-a,#FF8FB4);border:none;
 }
-.mood-hero .mood-date{font-size:12px;opacity:.92;letter-spacing:.5px;}
-.mood-hero .mood-hello{font-size:20px;font-weight:500;margin:6px 0 4px;}
-.mood-hero .mood-quote{font-size:13px;opacity:.95;line-height:1.6;}
+.mood-hero .mood-top{display:flex;align-items:center;gap:8px;justify-content:space-between;position:relative;z-index:2;}
+.mood-hero .mood-date{font-size:12.5px;opacity:.94;letter-spacing:.3px;min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mood-hero .mood-quote{font-size:13px;opacity:.95;line-height:1.6;margin-top:8px;position:relative;z-index:2;}
 .mood-hero .mood-season{
-  position:absolute;right:14px;top:14px;background:rgba(255,255,255,.22);border-radius:999px;
-  padding:4px 10px;font-size:11px;backdrop-filter:blur(4px);
+  flex:0 0 auto;background:rgba(255,255,255,.22);border-radius:999px;
+  padding:3px 9px;font-size:11px;white-space:nowrap;position:static;
 }
-.mood-hero .mood-deco{position:absolute;right:-18px;bottom:-28px;font-size:88px;opacity:.18;line-height:1;}
+.mood-hero .mood-deco{position:absolute;right:-10px;bottom:-30px;font-size:48px;opacity:.15;line-height:1;z-index:0;pointer-events:none;}
 [data-theme="dark"] .mood-hero{filter:saturate(.9) brightness(.9);}
 
 /* ========== 养成花园 ========== */
@@ -906,7 +964,12 @@ const Item = {
     });
   },
   visible(it){ return it && !it.deletedAt; },
+  // 草稿：用于「尚未落库」的占位条目。id 必须为空，否则会被当成已存在的条目去 patch 而失败。
+  draft(text, fields, opts){
+    return Object.assign(this.make(text, fields, opts), {id:'', _draft:true});
+  },
   badge(it){
+    if(it.carriedTo) return `<span class="carry-badge out" title="已结转到其他周期">已结转</span>`;
     if(!it.carryFrom) return '';
     const from=it.carryFrom.date||it.carryFrom.periodKey||'';
     return `<span class="carry-badge" title="从 ${Utils.esc(from)} 顺延">顺延${it.carryFrom.times>1?'×'+it.carryFrom.times:''} · ${String(from).slice(5)}</span>`;
@@ -917,8 +980,38 @@ const Item = {
    Migrate：v1 / v2 / v3 链式迁移（幂等 + 快照）
    ============================================================ */
 const Migrate = {
+  // 类型归一：手改过或半截的备份里，数组可能变成字符串、对象可能变成 null，先兜住再迁移
+  // 注意：只修"已存在但类型不对"的键，不凭空造空数组，否则会顶掉后面对默认值的兜底
+  coerce(input){
+    const isObj=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
+    const obj=x=>isObj(x)?x:{};
+    const arr=x=>Array.isArray(x)?x.filter(i=>isObj(i)):[];
+    const fixArr=(o,keys)=>{ if(!isObj(o)) return; keys.forEach(k=>{ if(Object.prototype.hasOwnProperty.call(o,k)) o[k]=arr(o[k]); }); };
+    const d=obj(input);
+    d.meta=obj(d.meta);
+    d.plans=obj(d.plans);
+    fixArr(d.plans,['weekly','monthly','yearly','items']);
+    d.templates=obj(d.templates);
+    fixArr(d.templates,['benben','tiaotiao']);
+    d.trash=arr(d.trash);
+    d.byDate=obj(d.byDate);
+    Object.keys(d.byDate).forEach(ds=>{
+      const day=obj(d.byDate[ds]);
+      ['dailyPlan','wishlist','readingQueue','inspiration','reflection'].forEach(k=>{
+        if(isObj(day[k])) day[k].items=arr(day[k].items);
+      });
+      if(isObj(day.bodyMind)){
+        ['sleep','diet','drink','exercise','media','skincare','medical'].forEach(k=>{
+          if(isObj(day.bodyMind[k])) day.bodyMind[k].items=arr(day.bodyMind[k].items);
+        });
+        if(!isObj(day.bodyMind.bodyData)) day.bodyMind.bodyData={};
+      }
+      d.byDate[ds]=day;
+    });
+    return d;
+  },
   normalize(input){
-    let d=input && typeof input==='object'?input:{};
+    let d=this.coerce(input);
     if(d.schemaVersion===3) return this.ensureShape(d);
     // v1 -> v2 结构修补（沿用线上版本的兼容逻辑）
     if(!d.version || d.version<2) d=this.v1toV2(d);
@@ -1008,14 +1101,23 @@ const Migrate = {
     const bm=old.bodyMind||{};
     const sl=bm.sleep||{};
     const sleepItem=(r,kind)=>Item.make(kind==='nap'?'午睡':'夜间睡眠',{kind:kind,bedTime:r.bedTime||'',wakeTime:r.wakeTime||'',quality:Number(r.quality)||0,dreamt:!!r.dreamt},{id:r.id,done:!!(r.bedTime&&r.wakeTime),sourceDate:ds,periodKey:ds,order:++n*100,carryPolicy:'keep'});
-    if(sl.nightSleep) add('bodyMind.sleep',sleepItem(sl.nightSleep,'night'));
-    if(sl.nap) add('bodyMind.sleep',sleepItem(sl.nap,'nap'));
-    (sl.nightSleep&&sl.nightSleep.records||[]).forEach(r=>add('bodyMind.sleep',sleepItem(r,'night')));
-    (sl.nap&&sl.nap.records||[]).forEach(r=>add('bodyMind.sleep',sleepItem(r,'nap')));
+    // 全空的睡眠记录不生成条目，避免老数据里出现空行
+    const emptySleep=r=>!r||(!r.bedTime&&!r.wakeTime&&!(Number(r.quality)>0)&&!r.dreamt);
+    const pushSleep=(r,kind)=>{ if(emptySleep(r)) return; add('bodyMind.sleep',sleepItem(r,kind)); };
+    pushSleep(sl.nightSleep,'night');
+    pushSleep(sl.nap,'nap');
+    (sl.nightSleep&&sl.nightSleep.records||[]).forEach(r=>{
+      // v1→v2 会把主记录同时复制进 records，完全重复的那条跳过
+      if(sl.nightSleep&&!emptySleep(sl.nightSleep)&&r.bedTime===sl.nightSleep.bedTime&&r.wakeTime===sl.nightSleep.wakeTime) return;
+      // v1 的 records 里可能带 type='nap'，按午睡归档而不是混进夜睡
+      pushSleep(r,r.type==='nap'?'nap':'night');
+    });
+    (sl.nap&&sl.nap.records||[]).forEach(r=>pushSleep(r,'nap'));
 
     const diet=bm.diet||{};
     CONFIG.MEALS.forEach(([k,label],i)=>{
-      const v=diet[k]||'';
+      const v=String(diet[k]||'').trim();
+      if(!v) return; // 没填的餐次不再生成空条目
       add('bodyMind.diet',Item.make(v,{meal:k},{sourceDate:ds,periodKey:ds,order:(i+1)*100,carryPolicy:'keep'}));
     });
 
@@ -1051,10 +1153,21 @@ const Migrate = {
     d.meta=Object.assign({deviceId:Utils.deviceId(),createdAt:Utils.todayStr(),updatedAt:Utils.now(),lastOpenDate:Utils.todayStr(),lastExportAt:null},d.meta||{});
     d.meta.sync=Object.assign({enabled:false,adapter:'none',endpoint:'',user:'',lastSyncAt:null,conflictCount:0},d.meta.sync||{});
     d.templates=d.templates||{};
+    d.templates.rev=d.templates.rev||1;
     d.templates.benben=d.templates.benben||CONFIG.DEFAULT_BENBEN.map((t,i)=>Item.make(t,{}, {order:(i+1)*100,carryPolicy:'carry'}));
     d.templates.tiaotiao=d.templates.tiaotiao||CONFIG.DEFAULT_TIAOTIAO.map((t,i)=>Item.make(t,{}, {order:(i+1)*100,carryPolicy:'carry'}));
     d.byDate=d.byDate||{};
     d.plans=Object.assign({weekly:[],monthly:[],yearly:[]},d.plans||{});
+    // 修复历史 bug：早期版本把计划条目误写进 plans.items，按 periodKey 形态归位
+    if(Array.isArray(d.plans.items)&&d.plans.items.length){
+      d.plans.items.forEach(it=>{
+        const pk=String(it.periodKey||'');
+        const type=/^\d{4}-W\d{1,2}$/.test(pk)?'weekly':/^\d{4}-\d{1,2}$/.test(pk)?'monthly':/^\d{4}$/.test(pk)?'yearly':'weekly';
+        if(!it.periodKey) it.periodKey=Utils.periodKey(type,it.sourceDate||Utils.todayStr());
+        d.plans[type].push(it);
+      });
+      delete d.plans.items;
+    }
     if(Array.isArray(d.plans.daily)&&d.plans.daily.length){
       d.byDate=d.byDate||{};
       d.plans.daily.forEach(it=>{
@@ -1185,8 +1298,7 @@ const Store = {
     this.commit(d=>{
       if(!d.byDate[date]) d.byDate[date]=Migrate.emptyDay();
       const p=this._pathIn(d,scope,date);
-      p.node.items=p.node.items||[];
-      p.node.items.push(it);
+      p.items.push(it);
     },{label:opts.label||'新增',quiet:opts.quiet});
     return it;
   },
@@ -1233,6 +1345,7 @@ const Store = {
       const it=p.items.find(i=>i.id===id);
       if(!it) return false;
       it.deletedAt=Utils.now();
+      it.updatedAt=it.deletedAt; // 删除也要刷新版本时间，否则合并时会被别的设备旧副本复活
       d.trash.push({tid:Utils.uid(),item:Utils.clone(it),scope:scope,date:date||found._date||found.sourceDate,deletedAt:it.deletedAt});
       return true;
     },{label:'删除',quiet:true});
@@ -1246,7 +1359,7 @@ const Store = {
         const t=idx.t;
         const p=this._pathIn(d,scope,t.date);
         const it=p.items.find(i=>i.id===id);
-        if(it) it.deletedAt=null; else p.items.push(t.item);
+        if(it){ it.deletedAt=null; it.updatedAt=Utils.now(); } else { t.item.deletedAt=null; t.item.updatedAt=Utils.now(); p.items.push(t.item); }
         d.trash.splice(idx.i,1);
       }
       return true;
@@ -1258,7 +1371,7 @@ const Store = {
       if(idx<0) return false;
       const t=d.trash[idx], p=this._pathIn(d,t.scope,t.date);
       const it=p.items.find(i=>i.id===t.item.id);
-      if(it) it.deletedAt=null; else p.items.push(t.item);
+      if(it){ it.deletedAt=null; it.updatedAt=Utils.now(); } else { t.item.deletedAt=null; t.item.updatedAt=Utils.now(); p.items.push(t.item); }
       d.trash.splice(idx,1);
       return true;
     },{label:'从回收站恢复'});
@@ -1299,8 +1412,10 @@ const Store = {
   exportJSON(){ return JSON.stringify(this._read(),null,2); },
   importJSON(str,mode){
     mode=mode||'merge';
-    const obj=JSON.parse(str);
-    if(!obj || (!obj.schemaVersion && !obj.version)) throw new Error('无效的备份文件');
+    let obj;
+    try{ obj=JSON.parse(str); }catch(e){ throw new Error('文件不是有效的 JSON，可能没下载完整'); }
+    if(!obj || typeof obj!=='object' || Array.isArray(obj)) throw new Error('这不是工作台的备份文件');
+    if(!obj.schemaVersion && !obj.version) throw new Error('这不是工作台的备份文件（缺少版本标记）');
     const incoming=Migrate.normalize(obj);
     if(mode==='replace'){
       if(rawSnapshot(str)) localStorage.setItem(SNAPSHOT_KEY,JSON.stringify({savedAt:Utils.now(),data:JSON.parse(str)}));
@@ -1333,13 +1448,15 @@ function rawSnapshot(str){ try{ JSON.parse(str); return true; }catch(e){ return 
 const Merge = {
   into(target,incoming){
     let count=0;
+    // 版本时间取 max(updatedAt, deletedAt)：让"删除"也能在合并中胜出
+    const stamp=x=>{ const a=String((x&&x.updatedAt)||''), b=String((x&&x.deletedAt)||''); return a>b?a:b; };
     const mergeArr=(a,b,keyFn)=>{
       const map=new Map();
       a.forEach(x=>map.set(keyFn(x),x));
       b.forEach(x=>{
         const k=keyFn(x), old=map.get(k);
         if(!old){ a.push(x); count++; }
-        else if(String(x.updatedAt||'')>String(old.updatedAt||'')){ Object.assign(old,x); count++; }
+        else if(stamp(x)>stamp(old)){ Object.assign(old,x); count++; }
       });
     };
     Object.keys(incoming.byDate||{}).forEach(ds=>{
@@ -1394,6 +1511,14 @@ const Carry = {
     if(last===today){ this.ensureTemplates(today); return 0; }
     let total=0;
     Store.commit(d=>{
+      // 目标日已有同名项时不再重复复制，改为把原条目指向已存在那条（同一件习惯只顺延一份）
+      const keyOf=(scope,it)=>scope+'|'+String(it.text||'').trim()+'|'+String((it.fields&&it.fields.owner)||'');
+      const todaySlots={};
+      CONFIG.DAILY_SCOPES.forEach(scope=>{
+        this._p(d,scope,today).items.forEach(it=>{
+          if(Item.visible(it)) todaySlots[keyOf(scope,it)]=it.id;
+        });
+      });
       const dates=Object.keys(d.byDate).filter(ds=>ds<today).sort();
       dates.forEach(ds=>{
         CONFIG.DAILY_SCOPES.forEach(scope=>{
@@ -1402,11 +1527,23 @@ const Carry = {
           if(!pending.length) return;
           const target=this._p(d,scope,today);
           pending.forEach(it=>{
+            const k=keyOf(scope,it);
+            const existId=todaySlots[k];
+            if(existId){
+              // 目标日已经有同一件事了：只建立指向关系，不再新增副本；并把顺延次数累计到徽章上
+              const ex=target.items.find(x=>x.id===existId);
+              if(ex&&ex.carryFrom){ ex.carryFrom.times=(ex.carryFrom.times||1)+1; ex.updatedAt=Utils.now(); }
+              it.carriedTo=existId;
+              it.carriedAt=Utils.now();
+              it.updatedAt=it.carriedAt;
+              return;
+            }
             const copy=Item.carry(it,today,today);
             copy.order=target.items.reduce((m,x)=>Math.max(m,x.order||0),0)+100;
             target.items.push(copy);
             it.carriedTo=copy.id;
             it.updatedAt=Utils.now();
+            todaySlots[k]=copy.id;
             total++;
           });
         });
@@ -1415,12 +1552,17 @@ const Carry = {
         if(Utils.periodKey(type,last)===Utils.periodKey(type,today)) return;
         const arr=d.plans[type]||[];
         const cur=Utils.periodKey(type,today);
+        const seen={};
+        arr.forEach(it=>{ if(Item.visible(it)&&!it.done&&!it.carriedTo&&it.periodKey===cur) seen[String(it.text||'').trim()]=it.id; });
         const pending=arr.filter(it=>Item.visible(it)&&!it.done&&!it.carriedTo&&it.carryPolicy==='carry'&&it.periodKey!==cur);
         pending.forEach(it=>{
+          const k=String(it.text||'').trim();
+          if(seen[k]){ it.carriedTo=seen[k]; it.carriedAt=Utils.now(); it.updatedAt=it.carriedAt; return; }
           const copy=Item.carry(it,cur,today);
           copy.fields=Object.assign({},it.fields,{planDate:today});
           copy.order=arr.reduce((m,x)=>Math.max(m,x.order||0),0)+100;
-          arr.push(copy); it.carriedTo=copy.id; it.updatedAt=Utils.now(); total++;
+          arr.push(copy); it.carriedTo=copy.id; it.updatedAt=Utils.now();
+          seen[k]=copy.id; total++;
         });
       });
       this.ensureTemplatesIn(d,today);
@@ -1430,20 +1572,175 @@ const Carry = {
     if(total) Utils.toast(`已顺延 ${total} 项到新周期`,'撤销',()=>Undo.undo());
     return total;
   },
+  /* ---------- 手动结转：严格同周期，目标必须晚于当前 ---------- */
+  _addDays(dateStr,n){
+    const d=new Date(Utils.parseDate(dateStr)); d.setDate(d.getDate()+n); return Utils.toDateStr(d);
+  },
+  targets(scope,item,date){
+    const type=scope.indexOf('plan:')===0?scope.slice(5):'daily';
+    if(type==='daily') return [];
+    const out=[];
+    const fromKey=item.periodKey||Utils.periodKey(type,date);
+    if(type==='weekly'){
+      const basis=item.sourceDate||date, seen={};
+      for(let i=1;i<=16&&out.length<10;i++){
+        const ds=this._addDays(basis,7*i);
+        const key=Utils.isoWeekKey(ds);
+        if(key<=fromKey||seen[key]) continue;
+        seen[key]=1;
+        const r=Utils.getWeekRange(ds);
+        const wy=key.slice(0,4), cy=String(Number(Utils.todayStr().slice(0,4)));
+        const wl=(wy!==cy?wy+' ':'')+'第 '+Number(key.slice(6))+' 周';
+        out.push({key,label:wl,sub:`${Number(r.start.slice(5,7))}月${Number(r.start.slice(8,10))}日 – ${Number(r.end.slice(5,7))}月${Number(r.end.slice(8,10))}日`});
+      }
+    }else if(type==='monthly'){
+      for(let i=1;i<=12;i++){
+        const key=Utils.shiftMonth(fromKey,i);
+        out.push({key,label:`${key.slice(0,4)}年${Number(key.slice(5,7))}月`,sub:''});
+      }
+    }else{
+      for(let i=1;i<=5;i++) out.push({key:String(Number(fromKey)+i),label:`${Number(fromKey)+i}年`,sub:''});
+    }
+    return out;
+  },
+  _collect(d,scope){
+    if(scope.indexOf('plan:')===0) return [d.plans[scope.slice(5)]||[]];
+    return Object.keys(d.byDate).map(ds=>{
+      let node=d.byDate[ds];
+      const keys=scope.split('.');
+      for(let i=0;i<keys.length;i++){ if(!node||!node[keys[i]]) return null; node=node[keys[i]]; }
+      return node.items||null;
+    }).filter(Boolean);
+  },
+  manual(scope,id,targetKey,opts){
+    opts=opts||{};
+    const date=opts.date||State.currentDate;
+    const isPlan=scope.indexOf('plan:')===0;
+    const item=Store.find(scope,id,date);
+    if(!item||item.carriedTo) return false;
+    const srcDate=item._date||item.sourceDate||date;
+    let ok=false;
+    Store.commit(d=>{
+      let from,to;
+      if(isPlan){
+        const type=scope.slice(5);
+        d.plans[type]=d.plans[type]||[];
+        from=d.plans[type]; to=from;
+      }else{
+        if(!d.byDate[srcDate]) d.byDate[srcDate]=Migrate.emptyDay();
+        if(!d.byDate[targetKey]) d.byDate[targetKey]=Migrate.emptyDay();
+        from=this._p(d,scope,srcDate).items;
+        to=this._p(d,scope,targetKey).items;
+      }
+      const it=from.find(x=>x.id===id);
+      if(!it||it.deletedAt||it.carriedTo) return false;
+      const copy=Item.carry(it,targetKey,isPlan?Utils.todayStr():targetKey);
+      copy.order=to.reduce((m,x)=>Math.max(m,x.order||0),0)+100;
+      to.push(copy);
+      it.carriedTo=copy.id;
+      it.carriedAt=Utils.now();
+      it.updatedAt=it.carriedAt;
+      ok=true;
+      return true;
+    },{label:'结转到其他周期',quiet:true});
+    if(ok) State.render();
+    return ok;
+  },
+  undo(scope,id,date){
+    const item=Store.find(scope,id,date);
+    if(!item||!item.carriedTo) return false;
+    const targetId=item.carriedTo;
+    let ok=false;
+    Store.commit(d=>{
+      this._collect(d,scope).forEach(arr=>{
+        const i=arr.findIndex(x=>x.id===targetId);
+        if(i>-1){ arr.splice(i,1); ok=true; }
+      });
+      this._collect(d,scope).forEach(arr=>{
+        const src=arr.find(x=>x.id===id);
+        if(src&&src.carriedTo){ src.carriedTo=null; src.carriedAt=null; src.updatedAt=Utils.now(); ok=true; }
+      });
+      return ok;
+    },{label:'撤销结转',quiet:true});
+    if(ok) State.render();
+    return ok;
+  },
   ensureTemplates(date){
+    // 历史日期保持原样：任何入口都不再往过去补模板项
+    if(date<Utils.todayStr()) return;
+    const data=Store._read();
+    const rev=data.templates.rev||1;
+    const day=data.byDate[date];
+    if(day&&day.dailyPlan&&day.dailyPlan.templateRev===rev) return;
     Store.commit(d=>{ this.ensureTemplatesIn(d,date); },{label:'生成模板',quiet:true});
+  },
+  // 手动「按模板对齐」：只对今天/未来生效，忽略版本标记强制对齐一次
+  forceSync(date){
+    date=date||State.currentDate;
+    const today=Utils.todayStr();
+    if(date<today){
+      Utils.toast('历史日期保持原样，不支持按模板补齐');
+      return false;
+    }
+    Store.commit(d=>{
+      const dp=d.byDate[date]&&d.byDate[date].dailyPlan;
+      if(dp) dp.templateRev=null;
+      // 先对齐：清掉"模板里已删除"的今日未完成项，改名项同步新文案
+      this.alignTemplatesIn(d,date);
+    },{label:'按模板对齐',quiet:true});
+    this.ensureTemplates(date);
+    State.render();
+    Utils.toast('已按模板对齐本日打卡项');
+    return true;
+  },
+  // 对齐：tplId 能对上的改文案，对不上的（模板已删）且未完成未结转则移除
+  alignTemplatesIn(d,date){
+    const dp=this._p(d,'dailyPlan',date);
+    const tpls=[].concat(d.templates.benben||[],d.templates.tiaotiao||[]).filter(t=>Item.visible(t));
+    const byId=new Map(tpls.map(t=>[t.id,t]));
+    const byText=new Map(tpls.map(t=>[t.text,t]));
+    dp.items.forEach(it=>{
+      if(!Item.visible(it)||it.done||it.carriedTo) return;
+      if(it.fields&&Array.isArray(it.fields.times)) return; // 拉臭情况是固定行
+      if(it.tplId){
+        const t=byId.get(it.tplId);
+        if(!t){ it.deletedAt=Utils.now(); it.updatedAt=it.deletedAt; return; }
+        if(t.text!==it.text&&!Object.keys(it.fields||{}).some(k=>k!=='owner')){ it.text=t.text; it.updatedAt=Utils.now(); }
+        return;
+      }
+      // 老数据没有 tplId：文本已不在任何模板里，且除 owner 外没有任何用户输入 → 视为模板残留
+      const hasInput=Object.keys(it.fields||{}).some(k=>k!=='owner');
+      if(!hasInput&&!byText.has(it.text)){ it.deletedAt=Utils.now(); it.updatedAt=it.deletedAt; }
+    });
   },
   ensureTemplatesIn(d,today){
     if(!d.byDate[today]) d.byDate[today]=Migrate.emptyDay();
     const dp=d.byDate[today].dailyPlan;
-    if(dp.templateDate===today) return;
+    const rev=d.templates.rev||1;
+    const fresh=dp.templateRev!==rev;
+    dp.templateRev=rev;
     dp.templateDate=today;
     const carried=new Set(dp.items.filter(i=>Item.visible(i)&&i.carryFrom).map(i=>i.text));
+    // 模板改名后，今天已生成的对应项同步新文案（按 tplId 精确定位，不误伤手动新增项）
+    const tplById=new Map([].concat(d.templates.benben||[],d.templates.tiaotiao||[]).map(t=>[t.id,t]));
+    dp.items.forEach(it=>{
+      if(!Item.visible(it)||!it.tplId||it.done||it.carriedTo) return;
+      const t=tplById.get(it.tplId);
+      if(t&&Item.visible(t)&&t.text!==it.text){ it.text=t.text; it.updatedAt=Utils.now(); }
+    });
+    // 宝宝固定行：拉臭情况不是模板项，但如果当天没有就补一条（否则新的一天会消失）
+    const hasPoo=dp.items.some(i=>Item.visible(i)&&i.fields&&Array.isArray(i.fields.times));
+    if(fresh&&!hasPoo){
+      dp.items.push(Item.make('拉臭情况',{owner:'tiaotiao',times:[]},{sourceDate:today,periodKey:today,order:dp.items.reduce((m,x)=>Math.max(m,x.order||0),0)+100,carryPolicy:'keep'}));
+    }
     ['benben','tiaotiao'].forEach(owner=>{
       (d.templates[owner]||[]).forEach(t=>{
         if(!Item.visible(t)||carried.has(t.text)) return;
         if(dp.items.some(i=>Item.visible(i)&&i.text===t.text&&i.fields&&i.fields.owner===owner)) return;
-        dp.items.push(Item.make(t.text,{owner:owner},{sourceDate:today,periodKey:today,order:dp.items.reduce((m,x)=>Math.max(m,x.order||0),0)+100,carryPolicy:'carry'}));
+        if(dp.items.some(i=>Item.visible(i)&&i.tplId===t.id)) return;
+        const nt=Item.make(t.text,{owner:owner},{sourceDate:today,periodKey:today,order:dp.items.reduce((m,x)=>Math.max(m,x.order||0),0)+100,carryPolicy:'carry'});
+        nt.tplId=t.id; nt.tplOwner=owner;
+        dp.items.push(nt);
       });
     });
   },
@@ -1510,6 +1807,7 @@ const Charts = {
     const dpr=window.devicePixelRatio||1;
     c.width=w*dpr; c.height=h*dpr; c.style.width=w+'px'; c.style.height=h+'px';
     const ctx=c.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
+    ctx.textBaseline='alphabetic';
     return {ctx,w,h};
   },
   pie(id,labels,values,colors){
@@ -1531,9 +1829,15 @@ const Charts = {
   line(id,points,yLabel){
     const p=this.prepare(id); if(!p) return;
     const {ctx,w,h}=p;
-    if(!points.length){ ctx.fillStyle='#C4B5B9'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('暂无数据',w/2,h/2); return; }
+    if(!points.length){ ctx.fillStyle='#C4B5B9'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('本月还没有记录，填一次体重或体脂就能看到走势',w/2,h/2); return; }
     const pad={l:36,r:14,t:16,b:28};
     const vals=points.flatMap(x=>[x.weight,x.bodyFat]).filter(v=>v>0);
+    if(!vals.length){
+      // 有月份坐标但一条记录都没有：给出空状态，而不是留一块空白画布
+      ctx.fillStyle='#C4B5B9'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('本月还没有记录，填一次体重或体脂就能看到走势',w/2,h/2);
+      return;
+    }
     const max=Math.max.apply(null,vals.concat([1])), min=Math.min.apply(null,vals.concat([max]));
     const x=i=>pad.l+(w-pad.l-pad.r)*(points.length===1?0.5:i/(points.length-1));
     const y=v=>pad.t+(h-pad.t-pad.b)*(1-(v-min)/((max-min)||1));
@@ -1576,8 +1880,21 @@ const State = {
     if(last!==today) Store.commit(d=>{ d.meta.lastOpenDate=today; },{label:'跨天',quiet:true});
     this.currentDate=today; this.isToday=true;
   },
-  setDate(dateStr){ this.currentDate=dateStr; this.isToday=(dateStr===Utils.todayStr()); this.render(); },
-  navigate(route){ this.route=route; this.bodyMindSub=null; if(location.hash!==route) location.hash=route; else this.render(); },
+  setDate(dateStr){
+    if(!this.confirmLeave()) return;
+    this.currentDate=dateStr; this.isToday=(dateStr===Utils.todayStr()); this.render();
+  },
+  confirmLeave(){
+    const n=Draft.dirtyCount();
+    if(n&&!confirm('有 '+n+' 条记录还没保存，确定离开吗？')) return false;
+    Draft.clear();
+    return true;
+  },
+  navigate(route){
+    if(!this.confirmLeave()) return;
+    this.route=route; this.bodyMindSub=null;
+    if(location.hash!==route) location.hash=route; else this.render();
+  },
   render(){
     Charts.jobs=[];
     const vc=document.getElementById('view-container');
@@ -1646,6 +1963,94 @@ function renderDrawer(){
 /* ============================================================
    UI 通用组件：统一行、字段、添加器
    ============================================================ */
+/* ============================================================
+   Draft：多字段条目的草稿层（点「保存记录」之前不落库）
+   ============================================================ */
+const FORM_SCOPES=['bodyMind.sleep','bodyMind.media','bodyMind.medical','bodyMind.skincare',
+  'bodyMind.exercise','inspiration','reflection','plan:weekly','plan:monthly','plan:yearly'];
+function isFormScope(s){ return FORM_SCOPES.indexOf(s)>-1; }
+
+const Draft = {
+  map:{},
+  key(scope,slot){ return scope+'|'+slot; },
+  get(scope,slot){ return this.map[this.key(scope,slot)]||null; },
+  has(scope,slot){ return !!this.map[this.key(scope,slot)]; },
+  open(scope,slot,init){
+    init=init||{};
+    const date=init.date||State.currentDate;
+    this.map[this.key(scope,slot)]={
+      scope:scope, slot:slot, id:init.id||'', isNew:!init.id,
+      date:date, sourceDate:date, _date:date,
+      text:init.text||'',
+      fields:Object.assign({},init.fields||{}),
+      touched:false,
+      base:'',
+      dirty:false
+    };
+    const d=this.map[this.key(scope,slot)];
+    d.base=this.snap(d);
+    return d;
+  },
+  // 内容指纹：text + 排序后的 fields，用于和打开时的基准比对
+  snap(d){
+    const f=d.fields||{};
+    const norm=Object.keys(f).sort().map(k=>{ const v=f[k]; return [k, v===undefined?null:v]; });
+    return JSON.stringify([String(d.text==null?'':d.text).trim(), norm]);
+  },
+  // 默认值补齐后（如 sleep 的 kind）重设基准，避免把默认值当成用户输入
+  rebase(scope,slot){
+    const d=this.get(scope,slot);
+    if(d&&!d.touched){ d.base=this.snap(d); d.dirty=false; }
+  },
+  ensure(scope,slot,init){
+    if(!this.has(scope,slot)) this.open(scope,slot,init);
+    return this.get(scope,slot);
+  },
+  set(scope,slot,path,value){
+    const d=this.get(scope,slot); if(!d) return;
+    if(path.indexOf('fields.')===0) d.fields[path.slice(7)]=value;
+    else if(path==='text') d.text=value;
+    else d[path]=value;
+    // 计划 / 灵感的「花费时间」随日期联动
+    if(path==='fields.planDate'||path==='fields.realizeDate'||path==='fields.startDate'){
+      const a=scope.indexOf('plan:')===0?d.fields.planDate:d.fields.startDate;
+      d.fields.durationToRealize=(d.fields.realizeDate&&a)?Utils.daysBetween(a,d.fields.realizeDate):'';
+    }
+    d.touched=true;
+    d.dirty=this.snap(d)!==d.base;
+  },
+  filled(scope,slot){
+    const d=this.get(scope,slot); if(!d) return false;
+    if(String(d.text||'').trim()) return true;
+    return Object.keys(d.fields).some(k=>{
+      const v=d.fields[k];
+      return v!==''&&v!==null&&v!==undefined&&v!==0&&v!==false;
+    });
+  },
+  isDirty(scope,slot){
+    const d=this.get(scope,slot);
+    if(!d) return false;
+    return this.snap(d)!==d.base;
+  },
+  dirtyCount(){
+    return Object.keys(this.map).filter(k=>this.isDirty(this.map[k].scope,this.map[k].slot)).length;
+  },
+  close(scope,slot){ delete this.map[this.key(scope,slot)]; },
+  clear(){ this.map={}; },
+  save(scope,slot){
+    const d=this.get(scope,slot); if(!d) return false;
+    // 新记录必须真的填过内容（默认值不算），避免存下一条空记录
+    if(!d.id && !d.touched){ Utils.toast('请先填写内容'); return false; }
+    const date=d.date||State.currentDate;
+    if(d.id) Store.patch(scope,d.id,{text:d.text,fields:Object.assign({},d.fields)},{date,label:'保存记录',quiet:true});
+    else Store.add(scope,Item.make(d.text,d.fields,{sourceDate:date,periodKey:Utils.periodKey(scope.replace('plan:',''),date),carryPolicy:'keep'}),{date,label:'新增记录',quiet:true});
+    this.close(scope,slot);
+    State.render();
+    Utils.toast('已保存');
+    return true;
+  }
+};
+
 const UI = {
   row(item,scope,opts){
     opts=opts||{};
@@ -1653,9 +2058,13 @@ const UI = {
     const attrs=`data-scope="${Utils.esc(scope)}" data-id="${item.id}" data-date="${date}"`;
     const toggle=opts.toggle?`<span class="check-dot ${item.done?'done':''}" data-action="toggle" ${attrs} title="标记完成">${opts.toggle==='star'?(item.done?'⭐':'☆'):(item.done?'✅':'⭕')}</span>`:'';
     const text=`<span class="row-text ${item.done?'done':''}" data-action="edit" ${attrs} title="点击编辑">${Utils.esc(item.text||opts.placeholder||'（未填写）')}</span>`;
+    const carryBtn=(opts.carry&&!item.done)
+      ? `<button class="icon-btn ${item.carriedTo?'carried':''}" data-action="carry-open" ${attrs} title="${item.carriedTo?'已结转，点击可还原':'结转到其他周期'}">↷</button>`
+      : '';
     const actions=`<span class="row-actions">
       <button class="icon-btn" data-action="up" ${attrs} title="上移">↑</button>
       <button class="icon-btn" data-action="down" ${attrs} title="下移">↓</button>
+      ${carryBtn}
       <button class="icon-btn" data-action="delete" ${attrs} title="删除">✕</button>
     </span>`;
     return `<div class="u-row ${item.done?'done':''}" draggable="true" data-drag-scope="${Utils.esc(scope)}" data-drag-id="${item.id}" data-date="${date}">
@@ -1675,6 +2084,47 @@ const UI = {
       <button class="btn btn-sm" data-action="add" data-add-scope="${Utils.esc(scope)}" data-date="${opts.date||State.currentDate}" data-add-kind="${Utils.esc(opts.kind||'')}">➕ 添加</button>
     </div>`;
   },
+  recRow(scope,item,opts){
+    opts=opts||{};
+    const date=opts.date||item._date||item.sourceDate||State.currentDate;
+    const attrs=`data-scope="${Utils.esc(scope)}" data-id="${item.id}" data-date="${date}"`;
+    const toggle=opts.toggle?`<span class="check-dot ${item.done?'done':''}" data-action="toggle" ${attrs} title="标记完成">${item.done?'✅':'⭕'}</span>`:'';
+    const carry=(opts.carry&&!item.done)?`<button class="icon-btn ${item.carriedTo?'carried':''}" data-action="carry-open" ${attrs} title="${item.carriedTo?'已结转，点击可还原':'结转到其他周期'}">↷</button>`:'';
+    return `<div class="u-row rec-row">
+      <div class="row-main">
+        ${toggle}
+        <span class="row-text">${Utils.esc(item.text||'（未命名）')}</span>
+        ${Item.badge(item)}
+        <span class="row-actions">
+          <button class="icon-btn" data-action="rec-edit" ${attrs} title="编辑">✎</button>
+          ${carry}
+          <button class="icon-btn" data-action="delete" ${attrs} title="删除">✕</button>
+        </span>
+      </div>
+      ${opts.summary?`<div class="rec-summary">${opts.summary(item)}</div>`:''}
+    </div>`;
+  },
+  formCard(scope,slot,spec,opts){
+    opts=opts||{};
+    const d=Draft.get(scope,slot);
+    if(!d) return '';
+    const dirty=Draft.isDirty(scope,slot);
+    const fields=spec.map(f=>{
+      const one=this.field(scope,d,f.path,f.label,f.type,f.opts||{});
+      return f.full?`<div style="grid-column:1/-1">${one}</div>`:one;
+    }).join('');
+    return `<div class="rec-form-card" data-draft-form="1" data-dscope="${Utils.esc(scope)}" data-dslot="${Utils.esc(slot)}">
+      <div class="rec-form-head">
+        <span class="rec-form-title">${opts.icon||'📝'} ${Utils.esc(opts.title||'新增记录')}</span>
+        <span class="draft-dot" style="${dirty?'':'display:none'}"></span>
+      </div>
+      <div class="field-grid">${fields}</div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-sm${dirty?'':' btn-dim'}" style="flex:2;" data-action="draft-save" data-scope="${Utils.esc(scope)}" data-slot="${Utils.esc(slot)}">保存记录</button>
+        <button class="btn btn-sm btn-outline" style="flex:1;" data-action="draft-cancel" data-scope="${Utils.esc(scope)}" data-slot="${Utils.esc(slot)}">取消</button>
+      </div>
+    </div>`;
+  },
   field(scope,item,path,label,type,opts){
     opts=opts||{};
     const v=path.indexOf('fields.')===0?(item.fields||{})[path.slice(7)]:item[path];
@@ -1688,7 +2138,8 @@ const UI = {
     if(type==='range'){
       return `<div class="field"><div class="field-label">${label} <b class="range-val">${Number(v)||0}%</b></div><input type="range" min="0" max="100" value="${Number(v)||0}" ${attrs} oninput="this.parentElement.querySelector('.range-val').textContent=this.value+'%'"></div>`;
     }
-    return `<div class="field"><div class="field-label">${label}</div><input type="${type||'text'}" class="input ${type==='date'?'input-date':type==='time'?'input-time':''}" value="${Utils.esc(v==null?'':v)}" ${attrs} placeholder="${Utils.esc(label)}" ${type==='number'?'step="any"':''}></div>`;
+    const cls='input'+(type==='date'?' input-date':type==='time'?' input-time':type==='datetime-local'?' input-datetime':'');
+    return `<div class="field"><div class="field-label">${label}</div><input type="${type||'text'}" class="${cls}" value="${Utils.esc(v==null?'':v)}" ${attrs} placeholder="${Utils.esc(label)}" ${opts.readonly?'readonly':''} ${type==='number'?'step="any"':''}></div>`;
   },
   collapse(key,title,emoji,count,inner){
     const open=!!State.ui('collapse')[key];
@@ -1714,12 +2165,24 @@ const UI = {
    花园 / 热力图 / 月度小报 / 故事流 / 微动效配置）
    ============================================================ */
 const Delight = {
+  // 60 条：按日期哈希取模，60 天内不重复
   QUOTES:[
     '慢慢来，比较快。','今天也要好好吃饭呀。','把日子过成喜欢的样子。','小步走，也在向前。',
     '你认真生活的样子很好看。','不必完美，完成就好。','照顾好自己，才有余力爱别人。',
     '每一次记录，都是和自己对话。','阳光正好，风也温柔。','坚持是一件很酷的事。',
     '今天的小确幸，藏在细节里。','松弛一点，日子会更甜。','做喜欢的事，慢慢变好。',
-    '所有的努力都会开花。','给自己一点掌声。','生活明朗，万物可爱。'
+    '所有的努力都会开花。','给自己一点掌声。','生活明朗，万物可爱。',
+    '今天也认真活了一点点。','小事做完了，就是好的一天。','允许自己慢一拍。','今天的风，值得停一下。',
+    '有记录的日子不会白过。','好好吃饭，好好睡觉，就是本事。','不着急，日子还长。','把今天过完，就是胜利。',
+    '累了就停，不丢人。','你已经比昨天更熟练了。','愿你所求皆有回应。','安静地努力，热闹地生活。',
+    '别把日子过成任务清单。','喝口水，再继续。','今天也值得被记住。','慢慢来，你走得不慢。',
+    '把情绪写下来，它就轻了。','认真生活的痕迹都在这里。','不必和谁比，和昨天比就好。','留一点空白给意外的好事。',
+    '坚持不需要理由，休息也是。','今天的光很温柔。','做完了就夸夸自己。','小事认真，大事从容。',
+    '日子是自己的，慢慢收拾。','有些进步是看不见的。','很普通的一天，也很好。','把喜欢的事排进日程。',
+    '今天不必很厉害，只要在场。','照顾好身体，它陪你很久。','写下来，就不算白过。','允许计划有变化。',
+    '睡前想想今天的好。','你的节奏就是对的节奏。','一点点，也算数。','风雨里做个大人，阳光里做个小孩。',
+    '值得的事都值得慢慢来。','给明天留一点期待。','今天的你，已经很努力了。','心安处即是归处。',
+    '把日子过慢一点。','小小的坚持，会连成一片。','先做五分钟。','今天也要好好爱自己。'
   ],
   SEASONS:{
     spring:{key:'spring',name:'春日',emoji:'🌸',from:3,to:5,colors:['#FF8FB4','#FFD1DC'],tip:'春风十里，不如你'},
@@ -1945,6 +2408,8 @@ const Delight = {
    ============================================================ */
 function renderHome(){
   const d=State.currentDate;
+  // 今天与未来日期按模板预生成打卡项，保证提前查看时也能看到清单
+  if(d>=Utils.todayStr()) Carry.ensureTemplates(d);
   const day=Store.getDay(d,false)||Migrate.emptyDay();
   const daily=Store.getItems('dailyPlan',d);
   const ben=daily.filter(i=>i.fields.owner==='benben'), tt=daily.filter(i=>i.fields.owner==='tiaotiao');
@@ -1968,11 +2433,12 @@ function renderHome(){
   vc.innerHTML=`
     <div class="mood-hero" style="--hero-a:${season.colors[0]};background:linear-gradient(135deg,${season.colors[0]},${season.colors[1]});">
       <div class="hero-glow"></div>
-      <div class="mood-season">${season.emoji} ${season.name} · ${season.tip}</div>
-      <div class="mood-date">${State.isToday?'今天':'历史'} ${Utils.fullDateCN(d)} · v3</div>
-      <div class="mood-hello">${State.isToday?Delight.greeting():'翻开那一天'}</div>
-      <div class="mood-quote">「${Utils.esc(Delight.quote(d))}」</div>
       <div class="mood-deco">${season.emoji}</div>
+      <div class="mood-top">
+        <span class="mood-date">${Utils.fullDateCN(d)}</span>
+        <span class="mood-season">${season.emoji} ${season.name}</span>
+      </div>
+      <div class="mood-quote">「${Utils.esc(Delight.quote(d))}」</div>
     </div>
     ${UI.carryBanner(daily.filter(i=>i.carryFrom))}
     <div class="card garden-card">
@@ -2062,22 +2528,27 @@ function homeReadingReminder(d){
    ============================================================ */
 function renderDailyPlan(){
   const d=State.currentDate;
+  if(d>=Utils.todayStr()) Carry.ensureTemplates(d);
   const all=Store.getItems('dailyPlan',d);
   const ben=all.filter(i=>i.fields.owner==='benben'), tt=all.filter(i=>i.fields.owner==='tiaotiao');
   const poo=tt.find(i=>i.fields.times);
   const vc=document.getElementById('view-container');
   vc.innerHTML=`
-    <div class="card" style="text-align:center;margin-top:6px;"><div style="font-size:12px;color:var(--text-sub);">${Utils.fullDateCN(d)}</div></div>
+    <div class="card" style="text-align:center;margin-top:6px;">
+      <div style="font-size:12px;color:var(--text-sub);">${Utils.fullDateCN(d)}</div>
+      ${d>Utils.todayStr()?`<div class="hint">提前预览：已按打卡模板预生成，可直接勾选或编辑</div>`:''}
+      <div class="btn-row" style="justify-content:center;"><button class="btn btn-sm btn-outline" data-action="sync-tpl" data-date="${d}" title="${d<Utils.todayStr()?'历史日期保持原样，不支持补齐':'补齐缺失项，并清理已从模板删除的未完成项'}">↻ 按模板对齐本日</button></div>
+    </div>
     ${UI.carryBanner(all.filter(i=>i.carryFrom))}
     <div class="card">
       <div class="card-title"><span class="emoji">👩</span>妈妈的打卡</div>
-      <div id="benben-list">${UI.list('dailyPlan',ben,{toggle:true,empty:'暂无打卡项'})}</div>
+      <div id="benben-list">${UI.list('dailyPlan',ben,{toggle:true,carry:true,empty:'暂无打卡项'})}</div>
       ${UI.addBox('dailyPlan',{placeholder:'新打卡项',extra:'benben',date:d})}
       <div class="hint">点击文字可编辑 · ↑↓ 调整顺序 · 拖动条目也可排序</div>
     </div>
     <div class="card">
       <div class="card-title"><span class="emoji">👧</span>宝宝的打卡</div>
-      <div id="tiaotiao-list">${UI.list('dailyPlan',tt.filter(i=>i!==poo),{toggle:true,empty:'暂无打卡项'})}</div>
+      <div id="tiaotiao-list">${UI.list('dailyPlan',tt.filter(i=>i!==poo),{toggle:true,carry:true,empty:'暂无打卡项'})}</div>
       ${UI.addBox('dailyPlan',{placeholder:'新打卡项',extra:'tiaotiao',date:d})}
       ${poo?pooRow(poo,d):''}
     </div>
@@ -2102,8 +2573,10 @@ function renderWishlist(){
   const d=State.currentDate;
   const all=Store.allItems('wishlist');
   const undone=all.filter(i=>!i.done);
-  const today=undone.filter(i=>i._date===d);
-  const history=undone.filter(i=>i._date!==d);
+  // 今日与历史清单都保留已完成项：勾选后留在原位（划线），再点一次即可取消，避免"记录消失"的错觉
+  const today=all.filter(i=>i._date===d).map(i=>Object.assign({},i,{sourceDate:i.sourceDate||i._date}));
+  const history=all.filter(i=>i._date!==d).map(i=>Object.assign({},i,{sourceDate:i.sourceDate||i._date}));
+  const todayDone=today.filter(i=>i.done).length;
   const vc=document.getElementById('view-container');
   vc.innerHTML=`
     <div class="card" style="text-align:center;margin-top:6px;">
@@ -2111,10 +2584,11 @@ function renderWishlist(){
       <div class="stat-row" style="justify-content:center;"><span class="stat-num">${undone.length}</span><span style="color:var(--text-sub);">/${all.length} 未完成/全部</span></div>
       ${all.length?`<div class="progress-bar" style="margin-top:6px;"><div class="progress-fill" style="width:${Math.round((all.length-undone.length)/all.length*100)}%"></div></div>`:''}
     </div>
-    ${UI.collapse('wishHistory','历史种草清单','🗂️',history.length,`<div style="margin-top:8px;">${UI.list('wishlist',history,{toggle:'star',date:null,empty:'暂无未完成种草'})}</div>`)}
+    ${UI.collapse('wishHistory','历史种草清单','🗂️',history.length,`<div style="margin-top:8px;">${UI.list('wishlist',history,{toggle:'star',date:null,empty:'暂无历史种草'})}</div>${history.length?'<div class="hint">已完成的条目会留在清单里，点 ⭐ 可改回未完成</div>':''}`)}
     <div class="card">
-      <div class="card-title"><span class="emoji">🛒</span>今日种草</div>
+      <div class="card-title"><span class="emoji">🛒</span>今日种草${today.length?`<span class="time-tag" style="margin-left:auto;">已完成 ${todayDone}/${today.length}</span>`:''}</div>
       ${UI.list('wishlist',today,{toggle:true,date:d,empty:'今天还没有新增种草'})}
+      <div class="hint">勾选后会留在原位并划线，再点一次即可取消勾选</div>
     </div>
     <div class="card"><div class="card-title"><span class="emoji">➕</span>添加种草</div>${UI.addBox('wishlist',{placeholder:'想买什么',date:d})}</div>
   `;
@@ -2134,7 +2608,7 @@ function renderBodyMind(){
     <div class="card" style="text-align:center;margin-top:6px;"><div style="font-size:12px;color:var(--text-sub);">${Utils.fullDateCN(d)}</div></div>
     <div class="card"><div class="card-title"><span class="emoji">🌿</span>身心成长</div>
       <div class="sub-menu-grid">${CONFIG.BODYMIND_SUBS.map(s=>`<div class="sub-menu-card" data-sub="${s.id}"><span class="emoji">${s.emoji}</span><div class="label">${s.label}</div></div>`).join('')}</div>
-      <div class="hint">所有字段自动保存，无需点击保存按钮</div>
+      <div class="hint">睡眠 / 观影 / 就医 / 护肤 / 锻炼这类多字段记录，填完点「保存记录」再入库；饮食、茶饮、体重这类单值记录仍然即时保存</div>
     </div>`;
 }
 function renderBodyMindSub(sub){
@@ -2156,29 +2630,42 @@ function renderBodyMindSub(sub){
 }
 function sleepPage(d){
   const items=Store.getItems('bodyMind.sleep',d);
-  const nap=items.find(i=>i.fields.kind==='nap')||Item.make('午睡',{kind:'nap',bedTime:'',wakeTime:'',quality:0,dreamt:false},{sourceDate:d,periodKey:d});
-  const night=items.find(i=>i.fields.kind==='night'&&!i.carryFrom)||Item.make('夜间睡眠',{kind:'night',bedTime:'',wakeTime:'',quality:0,dreamt:false},{sourceDate:d,periodKey:d});
-  const block=(it,title,id)=>{
-    const f=it.fields||{};
-    return `<div class="sleep-block">
-      <div class="sleep-head"><b>${title}</b>${it.id?`<button class="btn btn-sm btn-danger" data-action="delete" data-scope="bodyMind.sleep" data-id="${it.id}" data-date="${d}">🗑️ 清除</button>`:''}</div>
-      ${['bedTime','wakeTime'].map(k=>UI.field('bodyMind.sleep',it,'fields.'+k,k==='bedTime'?'入睡时间':'醒来时间',k==='bedTime'?'time':'time')).join('')}
-      <div class="field"><div class="field-label">睡眠质量</div><div class="star-row">${[1,2,3].map(n=>`<button class="btn btn-sm ${Number(f.quality)===n?'':'btn-outline'}" data-action="sleep-q" data-scope="bodyMind.sleep" data-id="${it.id||''}" data-kind="${f.kind}" data-q="${n}" data-date="${d}">${'⭐'.repeat(n)}</button>`).join('')}</div></div>
-      <label class="checkbox-wrap"><input type="checkbox" data-scope="bodyMind.sleep" data-id="${it.id||''}" data-field="fields.dreamt" data-date="${d}" ${f.dreamt?'checked':''}> 💭 是否做梦</label>
+  const nap=items.find(i=>i.fields.kind==='nap');
+  const night=items.find(i=>i.fields.kind==='night'&&!i.carryFrom);
+  const block=(kind,title,rec)=>{
+    const dr=Draft.ensure('bodyMind.sleep',kind,{
+      id:rec?rec.id:'', date:d,
+      text:kind==='nap'?'午睡':'夜间睡眠',
+      fields:rec?Object.assign({},rec.fields):{kind:kind,bedTime:'',wakeTime:'',quality:0,dreamt:false}
+    });
+    if(rec&&!dr.id){ dr.id=rec.id; dr.isNew=false; }
+    if(!dr.fields.kind) dr.fields.kind=kind;
+    Draft.rebase('bodyMind.sleep',kind);
+    const f=dr.fields||{}, dirty=Draft.isDirty('bodyMind.sleep',kind);
+    return `<div class="rec-form-card sleep-block" data-draft-form="1" data-dscope="bodyMind.sleep" data-dslot="${kind}">
+      <div class="sleep-head"><b>${title}</b><span class="draft-dot" style="${dirty?'':'display:none'}"></span></div>
+      ${UI.field('bodyMind.sleep',dr,'fields.bedTime','入睡时间','time')}
+      ${UI.field('bodyMind.sleep',dr,'fields.wakeTime','醒来时间','time')}
+      <div class="field"><div class="field-label">睡眠质量 <span class="hint" style="font-weight:400;">${Number(f.quality)?Number(f.quality)+' 星':'未评分'}</span></div><div class="star-row">${[1,2,3].map(n=>`<button class="btn btn-sm ${Number(f.quality)===n?'':'btn-outline'}" data-action="draft-star" data-scope="bodyMind.sleep" data-slot="${kind}" data-q="${n}" aria-label="${n} 星" aria-pressed="${Number(f.quality)===n}">${'★'.repeat(n)}${'☆'.repeat(3-n)}</button>`).join('')}</div></div>
+      <label class="checkbox-wrap"><input type="checkbox" data-scope="bodyMind.sleep" data-slot="${kind}" data-field="fields.dreamt" ${f.dreamt?'checked':''}> 💭 是否做梦</label>
       ${f.bedTime&&f.wakeTime?`<div class="hint">时长：${Utils.calcDuration(f.bedTime,f.wakeTime)}</div>`:''}
+      <div class="btn-row" style="margin-top:9px;">
+        <button class="btn btn-sm${dirty?'':' btn-dim'}" style="flex:2;" data-action="draft-save" data-scope="bodyMind.sleep" data-slot="${kind}">保存记录</button>
+        ${rec?`<button class="btn btn-sm btn-outline" style="flex:1;" data-action="draft-reset" data-scope="bodyMind.sleep" data-slot="${kind}" data-date="${d}">还原</button>`:''}
+      </div>
     </div>`;
   };
   const hist=Store.allItems('bodyMind.sleep').filter(i=>i.sourceDate!==d);
   const month=State.sleepMonth;
   Charts.defer(()=>{ const b=Stats.sleepByMonth(month); Charts.pie('sleep-month-pie',Object.keys(b),Object.values(b),['#FF6B9D','#FFD93D','#FFC4D6','#C4B5B9']); });
-  return `<div class="card"><div class="card-title"><span class="emoji">😴</span>今日睡眠</div>${block(nap,'☀️ 午睡')}${block(night,'🌙 夜间睡眠')}</div>
+  return `<div class="card"><div class="card-title"><span class="emoji">😴</span>今日睡眠 <span class="rec-count">填写后点保存</span></div>${block('nap','☀️ 午睡',nap)}${block('night','🌙 夜间睡眠',night)}</div>
     <div class="card"><div class="card-title"><span class="emoji">📊</span>${month} 睡眠质量分布</div><div class="chart-container medium"><canvas id="sleep-month-pie"></canvas></div></div>
     ${UI.collapse('sleepHistory','历史睡眠记录','📋',hist.length,`<div class="month-nav"><button class="btn btn-sm btn-outline" data-action="month" data-key="sleepMonth" data-delta="-1">‹</button><b>${month}</b><button class="btn btn-sm btn-outline" data-action="month" data-key="sleepMonth" data-delta="1">›</button></div>${hist.filter(i=>i.sourceDate.startsWith(month)).map(i=>UI.row(i,'bodyMind.sleep',{date:i.sourceDate,detail:it=>`<div class="hint">${it.fields.bedTime||'--'}~${it.fields.wakeTime||'--'} · ${Utils.calcDuration(it.fields.bedTime,it.fields.wakeTime)} · ${'⭐'.repeat(it.fields.quality||0)}</div>`})).join('')||'<div class="empty-state">本月暂无历史记录</div>'}`)}`;
 }
 function dietPage(d){
   const items=Store.getItems('bodyMind.diet',d);
   const rows=CONFIG.MEALS.map(([key,label],idx)=>{
-    const it=items.find(i=>i.fields.meal===key)||Item.make('',{meal:key},{sourceDate:d,periodKey:d,order:(idx+1)*100});
+    const it=items.find(i=>i.fields.meal===key)||Item.draft('',{meal:key},{sourceDate:d,periodKey:d,order:(idx+1)*100});
     return `<div class="diet-row" data-meal="${key}"><span class="field-label">${label}</span><input class="input" data-scope="bodyMind.diet" data-id="${it.id||''}" data-field="text" data-date="${d}" value="${Utils.esc(it.text)}" placeholder="记录${label}"></div>`;
   }).join('');
   return `<div class="card"><div class="card-title"><span class="emoji">🍱</span>饮食记录</div>${rows}<div class="hint">输入后离开输入框即自动保存</div></div>`;
@@ -2214,37 +2701,57 @@ function drinkPage(d){
 }
 function simpleListPage(scope,d,emoji,title,placeholder,fields){
   const items=Store.getItems(scope,d);
-  const detail=it=>`<div class="field-grid">${Object.keys(fields).map(k=>UI.field(scope,it,k,fields[k],k.indexOf('duration')>-1?'number':'text')).join('')}</div>`;
-  return `<div class="card"><div class="card-title"><span class="emoji">${emoji}</span>${title}</div>
-    ${UI.list(scope,items,{date:d,empty:'今天还没有记录~',detail})}
-    ${UI.addBox(scope,{placeholder,date:d})}
-    ${items.length?`<div class="hint">总时长 ${items.reduce((s,i)=>s+(Number(i.fields.duration)||0),0)} 分钟</div>`:''}</div>`;
+  const spec=[{path:'text',label:placeholder,type:'text',full:true}].concat(
+    Object.keys(fields).map(k=>({path:k,label:fields[k],type:k.indexOf('duration')>-1?'number':'text'}))
+  );
+  Draft.ensure(scope,'new',{date:d});
+  const list=items.map(it=>Draft.has(scope,it.id)
+    ? UI.formCard(scope,it.id,spec,{icon:'✎',title:'编辑记录',date:d})
+    : UI.recRow(scope,it,{date:d,summary:x=>[x.fields.product,x.fields.duration?x.fields.duration+' 分钟':''].filter(Boolean).join(' · ')})
+  ).join('');
+  return `${UI.formCard(scope,'new',spec,{icon:emoji,title:'新增'+title,date:d})}
+    <div class="card"><div class="card-title"><span class="emoji">📋</span>已保存记录 <span class="rec-count">${items.length}</span></div>
+      ${list||'<div class="empty-state">今天还没有记录~</div>'}
+      ${items.length?`<div class="hint">总时长 ${items.reduce((s,i)=>s+(Number(i.fields.duration)||0),0)} 分钟</div>`:''}</div>`;
 }
 function mediaPage(d){
   const scope='bodyMind.media', items=Store.getItems(scope,d);
   const platforms=['','小红书','bilibili','微博','微信','其他'];
-  const detail=it=>`<div class="field-grid">
-    ${UI.field(scope,it,'fields.mediaTime','观阅时间','datetime-local')}
-    ${UI.field(scope,it,'fields.type','类型','select',{options:['阅读','观影']})}
-    <div style="grid-column:1/-1">${UI.field(scope,it,'fields.url','链接','url')}</div>
-    ${UI.field(scope,it,'fields.platform','平台','select',{options:platforms})}
-    ${it.fields.platform==='其他'?UI.field(scope,it,'fields.platformOther','平台名称','text'):''}
-    ${UI.field(scope,it,'fields.duration','时长(分)','number')}
-    ${UI.field(scope,it,'fields.progress','完成度(%)','number')}
-  </div>`;
-  return `<div class="card"><div class="card-title"><span class="emoji">📖</span>观影阅读</div>
-    ${UI.list(scope,items,{date:d,toggle:true,empty:'今天还没阅读/观影~',detail})}
-    ${UI.addBox(scope,{placeholder:'标题',date:d})}</div>`;
+  const spec=[
+    {path:'text',label:'标题',type:'text',full:true},
+    {path:'fields.type',label:'类型',type:'select',opts:{options:['阅读','观影']}},
+    {path:'fields.mediaTime',label:'观阅时间',type:'datetime-local'},
+    {path:'fields.duration',label:'时长(分)',type:'number'},
+    {path:'fields.progress',label:'完成度(%)',type:'number'},
+    {path:'fields.platform',label:'平台',type:'select',opts:{options:platforms}},
+    {path:'fields.url',label:'链接',type:'url',full:true}
+  ];
+  Draft.ensure(scope,'new',{date:d});
+  const summary=x=>[x.fields.type,x.fields.duration?x.fields.duration+' 分钟':'',x.fields.progress?x.fields.progress+'%':''].filter(Boolean).join(' · ');
+  const list=items.map(it=>Draft.has(scope,it.id)
+    ? UI.formCard(scope,it.id,spec,{icon:'✎',title:'编辑记录',date:d})
+    : UI.recRow(scope,it,{date:d,toggle:true,summary})
+  ).join('');
+  return `${UI.formCard(scope,'new',spec,{icon:'📖',title:'新增观影阅读',date:d})}
+    <div class="card"><div class="card-title"><span class="emoji">📚</span>已保存记录 <span class="rec-count">${items.length}</span></div>
+      ${list||'<div class="empty-state">今天还没阅读/观影~</div>'}</div>`;
 }
 function medicalPage(d){
   const scope='bodyMind.medical', items=Store.getItems(scope,d);
-  const detail=it=>`<div class="field-grid">
-    ${UI.field(scope,it,'fields.date','记录日期','date')}
-    ${UI.field(scope,it,'fields.duration','历时','text')}
-    <div style="grid-column:1/-1">${UI.field(scope,it,'fields.detail','详情','textarea')}</div></div>`;
-  return `<div class="card"><div class="card-title"><span class="emoji">🏥</span>就医复盘</div>
-    ${UI.list(scope,items,{date:d,empty:'暂无就医记录',detail})}
-    ${UI.addBox(scope,{placeholder:'确诊疾病',date:d})}</div>`;
+  const spec=[
+    {path:'text',label:'确诊疾病',type:'text',full:true},
+    {path:'fields.date',label:'记录日期',type:'date'},
+    {path:'fields.duration',label:'历时',type:'text'},
+    {path:'fields.detail',label:'详情',type:'textarea',full:true}
+  ];
+  Draft.ensure(scope,'new',{date:d});
+  const list=items.map(it=>Draft.has(scope,it.id)
+    ? UI.formCard(scope,it.id,spec,{icon:'✎',title:'编辑记录',date:d})
+    : UI.recRow(scope,it,{date:d,summary:x=>[x.fields.date,x.fields.duration].filter(Boolean).join(' · ')})
+  ).join('');
+  return `${UI.formCard(scope,'new',spec,{icon:'🏥',title:'新增就医记录',date:d})}
+    <div class="card"><div class="card-title"><span class="emoji">📋</span>已保存记录 <span class="rec-count">${items.length}</span></div>
+      ${list||'<div class="empty-state">暂无就医记录</div>'}</div>`;
 }
 
 /* ============================================================
@@ -2273,29 +2780,45 @@ function renderReadingQueue(){
 }
 function renderInspiration(){
   const d=State.currentDate, items=Store.getItems('inspiration',d), scope='inspiration';
-  const detail=it=>`<div class="field-grid">
-    ${UI.field(scope,it,'fields.startDate','想法日期','date')}
-    ${UI.field(scope,it,'fields.realizeDate','落成时间','date')}
-    ${UI.field(scope,it,'fields.durationToRealize','花费时间(自动)','text')}
-    <div style="grid-column:1/-1">${UI.field(scope,it,'fields.review','时长复盘','textarea')}</div>
-    ${UI.field(scope,it,'fields.selfRating','完成度自评','range')}
-  </div>`;
+  const spec=[
+    {path:'text',label:'想法',type:'text',full:true},
+    {path:'fields.startDate',label:'想法日期',type:'date'},
+    {path:'fields.realizeDate',label:'落成时间',type:'date'},
+    {path:'fields.durationToRealize',label:'花费时间(自动)',type:'text',opts:{readonly:true}},
+    {path:'fields.selfRating',label:'完成度自评',type:'range'},
+    {path:'fields.review',label:'时长复盘',type:'textarea',full:true}
+  ];
+  Draft.ensure(scope,'new',{date:d,fields:{startDate:d}});
+  const summary=x=>[x.fields.realizeDate?'落成 '+x.fields.realizeDate:'未落成',x.fields.durationToRealize,x.fields.selfRating?x.fields.selfRating+'%':''].filter(Boolean).join(' · ');
+  const list=items.map(it=>Draft.has(scope,it.id)
+    ? UI.formCard(scope,it.id,spec,{icon:'✎',title:'编辑灵感',date:d})
+    : UI.recRow(scope,it,{date:d,summary})
+  ).join('');
   const vc=document.getElementById('view-container');
   vc.innerHTML=`<div class="card" style="text-align:center;margin-top:6px;"><div style="font-size:12px;color:var(--text-sub);">${Utils.fullDateCN(d)}</div></div>
-    <div class="card"><div class="card-title"><span class="emoji">💡</span>灵感一瞬</div>
-      ${UI.list(scope,items,{date:d,empty:'还没有灵感~ 记录一个吧',detail})}</div>
-    <div class="card"><div class="card-title"><span class="emoji">➕</span>添加灵感</div>${UI.addBox(scope,{placeholder:'记录一个灵感',date:d})}</div>`;
+    ${UI.formCard(scope,'new',spec,{icon:'💡',title:'记录一个灵感',date:d})}
+    <div class="card"><div class="card-title"><span class="emoji">📋</span>已保存灵感 <span class="rec-count">${items.length}</span></div>
+      ${list||'<div class="empty-state">还没有灵感~ 记录一个吧</div>'}</div>`;
 }
 function renderReflection(){
   const d=State.currentDate, items=Store.getItems('reflection',d), scope='reflection';
-  const detail=it=>`<div class="field-grid">
-    ${UI.field(scope,it,'fields.time','记录时间','datetime-local')}
-    <div style="grid-column:1/-1">${UI.field(scope,it,'text','内容','textarea')}</div></div>`;
+  const p2=x=>String(x).padStart(2,'0');
+  const n=new Date();
+  const nowLocal=`${n.getFullYear()}-${p2(n.getMonth()+1)}-${p2(n.getDate())}T${p2(n.getHours())}:${p2(n.getMinutes())}`;
+  const spec=[
+    {path:'text',label:'内容',type:'textarea',full:true},
+    {path:'fields.time',label:'记录时间',type:'datetime-local',full:true}
+  ];
+  Draft.ensure(scope,'new',{date:d,fields:{time:nowLocal}});
+  const list=items.map(it=>Draft.has(scope,it.id)
+    ? UI.formCard(scope,it.id,spec,{icon:'✎',title:'编辑碎碎念',date:d})
+    : UI.recRow(scope,it,{date:d,summary:x=>(x.fields.time||'').replace('T',' ')})
+  ).join('');
   const vc=document.getElementById('view-container');
   vc.innerHTML=`<div class="card" style="text-align:center;margin-top:6px;"><div style="font-size:12px;color:var(--text-sub);">${Utils.fullDateCN(d)}</div></div>
-    <div class="card"><div class="card-title"><span class="emoji">📝</span>复盘碎碎念</div>
-      ${UI.list(scope,items,{date:d,empty:'今天还没有碎碎念~',detail})}</div>
-    <div class="card"><div class="card-title"><span class="emoji">➕</span>添加碎碎念</div>${UI.addBox(scope,{placeholder:'写点什么',date:d})}</div>`;
+    ${UI.formCard(scope,'new',spec,{icon:'📝',title:'写点什么',date:d})}
+    <div class="card"><div class="card-title"><span class="emoji">📋</span>已保存碎碎念 <span class="rec-count">${items.length}</span></div>
+      ${list||'<div class="empty-state">今天还没有碎碎念~</div>'}</div>`;
 }
 
 /* ============================================================
@@ -2308,12 +2831,21 @@ function renderPlanPage(type){
   const all=Store.getItems(scope);
   const plans=all.filter(i=>i.periodKey===key);
   const done=plans.filter(i=>i.done).length;
-  const detail=it=>`<div class="field-grid">
-    ${UI.field(scope,it,'fields.planDate','计划日期','date')}
-    ${UI.field(scope,it,'fields.realizeDate','实现日期','date')}
-    ${UI.field(scope,it,'fields.durationToRealize','花费时间(自动)','text')}
-    <div style="grid-column:1/-1">${UI.field(scope,it,'fields.review','时长复盘','textarea')}</div>
-    ${UI.field(scope,it,'fields.selfRating','当前进度','range')}</div>`;
+  const detail=null;
+  const spec=[
+    {path:'text',label:'计划内容',type:'text',full:true},
+    {path:'fields.planDate',label:'计划日期',type:'date'},
+    {path:'fields.realizeDate',label:'实现日期',type:'date'},
+    {path:'fields.durationToRealize',label:'花费时间(自动)',type:'text',opts:{readonly:true}},
+    {path:'fields.selfRating',label:'当前进度',type:'range'},
+    {path:'fields.review',label:'时长复盘',type:'textarea',full:true}
+  ];
+  Draft.ensure(scope,'new',{date:d,fields:{planDate:d}});
+  const summary=x=>[x.fields.planDate?'计划 '+x.fields.planDate:'',x.fields.realizeDate?'实现 '+x.fields.realizeDate:'',x.fields.selfRating?x.fields.selfRating+'%':''].filter(Boolean).join(' · ');
+  const list=plans.map(it=>Draft.has(scope,it.id)
+    ? UI.formCard(scope,it.id,spec,{icon:'✎',title:'编辑计划',date:d})
+    : UI.recRow(scope,it,{toggle:true,carry:true,date:d,summary})
+  ).join('');
   const vc=document.getElementById('view-container');
   vc.innerHTML=`
     <div class="card" style="text-align:center;margin-top:6px;padding:10px 14px;">
@@ -2323,10 +2855,10 @@ function renderPlanPage(type){
     </div>
     <div class="period-tabs">${['weekly','monthly','yearly'].map(t=>`<button class="btn btn-sm ${t===type?'':'btn-outline'}" data-action="nav" data-route="#${t}">${CONFIG.PERIOD_EMOJI[t]}${CONFIG.PERIOD_LABEL[t]}</button>`).join('')}</div>
     ${UI.carryBanner(plans.filter(i=>i.carryFrom))}
-    <div class="card"><div class="card-title"><span class="emoji">${CONFIG.PERIOD_EMOJI[type]}</span>${CONFIG.PERIOD_LABEL[type]}清单</div>
-      ${UI.list(scope,plans,{toggle:true,empty:'还没有'+CONFIG.PERIOD_LABEL[type]+'~',detail})}</div>
-    <div class="card"><div class="card-title"><span class="emoji">➕</span>添加${CONFIG.PERIOD_LABEL[type]}</div>
-      ${UI.addBox(scope,{placeholder:'输入计划内容',date:d})}</div>`;
+    ${UI.formCard(scope,'new',spec,{icon:CONFIG.PERIOD_EMOJI[type],title:'新增'+CONFIG.PERIOD_LABEL[type],date:d})}
+    <div class="card"><div class="card-title"><span class="emoji">${CONFIG.PERIOD_EMOJI[type]}</span>${CONFIG.PERIOD_LABEL[type]}清单 <span class="rec-count">${plans.length}</span></div>
+      ${list||`<div class="empty-state">还没有${CONFIG.PERIOD_LABEL[type]}~</div>`}
+      ${plans.length?'<div class="hint">点 ↷ 可把这条结转到之后的同类周期</div>':''}</div>`;
 }
 
 /* ============================================================
@@ -2367,7 +2899,8 @@ function renderSettings(){
       <div class="btn-row">${Delight.themeList().map(t=>`<button class="btn btn-sm ${theme===t.key?'':'btn-outline'}" data-action="theme" data-theme="${t.key}">${t.emoji} ${t.name}</button>`).join('')}</div>
       <div class="hint">6 套配色随心换，含浅色/深色与四款彩色主题。桌面端自动显示常驻侧栏，手机端保持抽屉导航。</div>
     </div>
-    <div class="card"><div class="card-title"><span class="emoji">📌</span>打卡模板（影响每日自动生成）</div>
+    <div class="card"><div class="card-title"><span class="emoji">📌</span>打卡模板（每日自动生成）</div>
+      <div class="hint" style="margin-bottom:8px;line-height:1.7;">规则：① 改动<b>立即生效</b>——新增/改名的模板项会同步补进「今天」；② 切到<b>未来日期</b>时会按模板自动预生成，可提前安排；③ <b>历史日期</b>保持原样，不会被模板改写；④ 删除模板项会一并移除今天/未来<b>尚未完成</b>的对应打卡项，已完成的记录保留；⑤ 「拉臭情况」是宝宝固定行，每天自动保留。</div>
       ${['benben','tiaotiao'].map(owner=>`<div class="template-block"><div class="field-label">${owner==='benben'?'👩 妈妈':'👧 宝宝'}</div>
         ${UI.list('template:'+owner,data.templates[owner]||[],{empty:'暂无模板',detail:''})}
         ${UI.addBox('template:'+owner,{placeholder:'新增模板项',date:''})}</div>`).join('')}
@@ -2396,7 +2929,25 @@ const Actions = {
       case 'delete':
         if(scope.indexOf('template:')===0){
           const owner=scope.slice(9);
-          Store.commit(d=>{ d.templates[owner]=(d.templates[owner]||[]).filter(x=>x.id!==id); },{label:'删除模板'});
+          Store.commit(d=>{
+            const tpl=(d.templates[owner]||[]).find(x=>x.id===id);
+            d.templates[owner]=(d.templates[owner]||[]).filter(x=>x.id!==id);
+            d.templates.rev=(d.templates.rev||1)+1;
+            if(!tpl) return;
+            // 同步清理今天/未来由该模板生成、且还没完成的打卡项；已完成的历史记录保留
+            const today=Utils.todayStr();
+            Object.keys(d.byDate).forEach(ds=>{
+              if(ds<today) return;
+              const dp=d.byDate[ds]&&d.byDate[ds].dailyPlan;
+              if(!dp||!Array.isArray(dp.items)) return;
+              dp.items.forEach(it=>{
+                if(!Item.visible(it)||it.done||it.carriedTo) return;
+                const sameTpl=it.tplId===id;
+                const sameText=!it.tplId&&it.text===tpl.text&&it.fields&&it.fields.owner===owner;
+                if(sameTpl||sameText){ it.deletedAt=Utils.now(); it.updatedAt=it.deletedAt; }
+              });
+            });
+          },{label:'删除模板',quiet:false});
           break;
         }
         {
@@ -2443,6 +2994,31 @@ const Actions = {
       case 'import': importData(); break;
       case 'month': State[el.dataset.key]=Utils.shiftMonth(State[el.dataset.key],Number(el.dataset.delta)); State.render(); break;
       case 'sleep-q': this.sleepQuality(el,date); break;
+      case 'draft-star':
+        Draft.set(scope,el.dataset.slot,'fields.quality',Number(el.dataset.q));
+        State.render();
+        break;
+      case 'draft-save': Draft.save(scope,el.dataset.slot); break;
+      case 'draft-cancel': Draft.close(scope,el.dataset.slot); State.render(); break;
+      case 'draft-reset': {
+        const it=Store.find(scope,id||null,date);
+        if(it) Draft.open(scope,el.dataset.slot,{id:it.id,date:date,text:it.text,fields:it.fields});
+        State.render();
+        break;
+      }
+      case 'rec-edit': {
+        const it=Store.find(scope,id,date);
+        if(!it){ Utils.toast('没找到这条记录'); break; }
+        Draft.open(scope,id,{id:it.id,date:date||it.sourceDate,text:it.text,fields:it.fields});
+        State.render();
+        break;
+      }
+      case 'carry-open': CarryPanel.open(scope,id,date); break;
+      case 'carry-pick': CarryPanel.pick(el.dataset.key); break;
+      case 'carry-do': CarryPanel.confirm(); break;
+      case 'carry-undo': CarryPanel.undo(); break;
+      case 'carry-close': CarryPanel.close(); break;
+      case 'sync-tpl': Carry.forceSync(el.dataset.date||State.currentDate); break;
       case 'poo-add': this.pooAdd(el,date); break;
       case 'poo-del': this.pooDel(el,date); break;
       case 'trash-restore': Store.restoreTrash(el.dataset.tid); break;
@@ -2461,11 +3037,27 @@ const Actions = {
       const owner=scope.slice(9);
       const arr=Store._read().templates[owner]||[];
       const it=arr.find(x=>x.id===id); if(!it) return;
-      this.inlineEdit(el,text=>Store.commit(d=>{ const t=d.templates[owner].find(x=>x.id===id); if(t){t.text=text;t.updatedAt=Utils.now();} },{label:'编辑模板',quiet:true}));
+      this.inlineEdit(el,text=>Store.commit(d=>{
+        const t=d.templates[owner].find(x=>x.id===id);
+        if(!t) return;
+        const old=t.text;
+        t.text=text; t.updatedAt=Utils.now();
+        d.templates.rev=(d.templates.rev||1)+1;
+        // 同步今天及以后查看日期里对应的未完成打卡项，避免旧文案残留
+        Object.keys(d.byDate).forEach(ds=>{
+          if(ds<Utils.todayStr()) return;
+          const dp=d.byDate[ds]&&d.byDate[ds].dailyPlan;
+          if(!dp||!Array.isArray(dp.items)) return;
+          dp.items.forEach(it=>{
+            if(Item.visible(it)&&!it.done&&it.text===old&&it.fields&&it.fields.owner===owner){ it.text=text; it.updatedAt=Utils.now(); }
+          });
+        });
+      },{label:'编辑模板',quiet:true}));
       return;
     }
     const it=Store.find(scope,id,date); if(!it) return;
-    this.inlineEdit(el,text=>Store.patch(scope,id,{text},{date,label:'编辑文本'}));
+    // 手动改过文案的条目视为"用户自定义"，解除模板绑定，之后模板改名不再覆盖它
+    this.inlineEdit(el,text=>Store.patch(scope,id,it.tplId?{text,tplId:null}:{text},{date,label:'编辑文本'}));
   },
   inlineEdit(el,commit){
     if(el.querySelector('input')) return;
@@ -2489,11 +3081,23 @@ const Actions = {
     if(!text){ Utils.toast('请输入内容'); return; }
     if(scope.indexOf('template:')===0){
       const owner=scope.slice(9);
-      Store.commit(d=>{ d.templates[owner].push(Item.make(text,{}, {order:d.templates[owner].reduce((m,x)=>Math.max(m,x.order||0),0)+100,carryPolicy:'carry'})); },{label:'添加模板'});
+      Store.commit(d=>{
+        d.templates[owner].push(Item.make(text,{}, {order:d.templates[owner].reduce((m,x)=>Math.max(m,x.order||0),0)+100,carryPolicy:'carry'}));
+        d.templates.rev=(d.templates.rev||1)+1;
+      },{label:'添加模板'});
       return;
     }
     const fields={};
     if(scope==='dailyPlan') fields.owner=el.dataset.addKind||'benben';
+    if(scope==='reflection'){
+      // 碎碎念：记录时间默认取当前时刻，用户不必先写内容再回头补时间
+      const n=new Date();
+      fields.time=`${Utils.toDateStr(n)}T${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+    }
+    if(scope==='inspiration'){
+      // 灵感：想法日期默认今天
+      fields.startDate=date; fields.realizeDate=''; fields.durationToRealize=''; fields.review=''; fields.selfRating=0;
+    }
     if(scope==='plan:weekly'||scope==='plan:monthly'||scope==='plan:yearly'){
       const type=scope.slice(5);
       fields.planDate=date; fields.realizeDate=''; fields.review=''; fields.selfRating=0;
@@ -2503,10 +3107,16 @@ const Actions = {
     Store.add(scope,Item.make(text,fields,{sourceDate:date,periodKey:date,carryPolicy:scope==='readingQueue'||scope==='wishlist'||scope==='inspiration'?'carry':'keep'}),{date,label:'新增'});
   },
   sleepQuality(el,date){
-    const kind=el.dataset.kind, q=Number(el.dataset.q);
+    const kind=el.dataset.kind||'night', q=Number(el.dataset.q);
     const existing=el.dataset.id;
-    if(existing){
+    if(existing&&Store.find('bodyMind.sleep',existing,date)){
       Store.patch('bodyMind.sleep',existing,{'fields.quality':q},{date,label:'睡眠质量',quiet:false});
+      return;
+    }
+    // 草稿或失效 id：优先更新同类型（午睡/夜睡）已有条目，避免重复新建
+    const hit=Store.getItems('bodyMind.sleep',date).find(i=>i.fields.kind===kind);
+    if(hit){
+      Store.patch('bodyMind.sleep',hit.id,{'fields.quality':q},{date,label:'睡眠质量',quiet:false});
     }else{
       Store.add('bodyMind.sleep',Item.make(kind==='nap'?'午睡':'夜间睡眠',{kind:kind,bedTime:'',wakeTime:'',quality:q,dreamt:false},{sourceDate:date,periodKey:date,carryPolicy:'keep'}),{date,label:'睡眠质量'});
     }
@@ -2563,6 +3173,81 @@ const Actions = {
 };
 
 /* ============================================================
+   字段统一保存：草稿先落库并回写 id，之后走 patch
+   （change 与「打字即存」共用同一条路径）
+   ============================================================ */
+function saveField(t){
+  const scope=t.dataset.scope, id=t.dataset.id, date=t.dataset.date, path=t.dataset.field;
+  if(!scope||!path) return;
+  // 草稿表单：只写内存，等用户点「保存记录」
+  const form=t.closest?t.closest('[data-draft-form]'):null;
+  if(form){
+    const ds=form.dataset.dscope, dl=form.dataset.dslot;
+    if(!ds||!dl) return;
+    let dv=t.value;
+    if(t.type==='checkbox') dv=t.checked;
+    else if(t.type==='range') dv=Number(t.value);
+    else if(t.type==='number') dv=t.value===''?'':Number(t.value);
+    Draft.set(ds,dl,path,dv);
+    const dirty=Draft.isDirty(ds,dl);
+    const dot=form.querySelector('.draft-dot'); if(dot) dot.style.display=dirty?'':'none';
+    const btn=form.querySelector('[data-action="draft-save"]'); if(btn) btn.classList.toggle('btn-dim',!dirty);
+    if(t.type==='date'){ State.render(); return; }
+    return;
+  }
+  if(!id){
+    const ctxFields={};
+    if(scope==='bodyMind.diet'){
+      const row=t.closest&&t.closest('.diet-row');
+      ctxFields.meal=(row&&row.dataset.meal)||'';
+    }
+    if(scope==='bodyMind.sleep'){
+      ctxFields.kind=t.dataset.kind||(t.closest&&t.closest('[data-kind]')&&t.closest('[data-kind]').dataset.kind)||'night';
+      ctxFields.bedTime=''; ctxFields.wakeTime=''; ctxFields.quality=0; ctxFields.dreamt=false;
+    }
+    if(scope==='dailyPlan'){
+      const row=t.closest&&t.closest('[data-owner]');
+      ctxFields.owner=t.dataset.owner||(row&&row.dataset.owner)||'benben';
+    }
+    const it=Item.make('',ctxFields,{sourceDate:date||State.currentDate,periodKey:date||State.currentDate,carryPolicy:'keep'});
+    if(path.indexOf('fields.')===0) it.fields[path.slice(7)]=t.value; else it[path]=t.value;
+    const created=Store.add(scope,it,{date:date||State.currentDate,label:'保存字段'});
+    // 回写真实 id，避免后续每次输入都重复新建
+    if(created&&created.id&&t.dataset) t.dataset.id=created.id;
+    return;
+  }
+  let value=t.value;
+  if(t.type==='checkbox') value=t.checked;
+  if(t.type==='range') value=Number(t.value);
+  if(t.type==='number') value=t.value===''?'':Number(t.value);
+  const isPlan=scope.indexOf('plan:')===0;
+  if(isPlan&&(path==='fields.planDate'||path==='fields.realizeDate')){
+    const it=Store.find(scope,id,date);
+    if(it){
+      const f=Object.assign({},it.fields);
+      f[path.slice(7)]=value||'';
+      f.durationToRealize=(f.planDate&&f.realizeDate)?Utils.daysBetween(f.planDate,f.realizeDate):'';
+      Store.patch(scope,id,{done:!!f.realizeDate,fields:f},{date,label:'计划日期'});
+      State.render();
+      return;
+    }
+  }
+  if(scope==='inspiration'&&(path==='fields.startDate'||path==='fields.realizeDate')){
+    const it=Store.find(scope,id,date);
+    if(it){
+      const f=Object.assign({},it.fields);
+      f[path.slice(7)]=value||'';
+      // 花费时间 = 落成日期 − 想法日期（自动生成）
+      f.durationToRealize=(f.startDate&&f.realizeDate)?Utils.daysBetween(f.startDate,f.realizeDate):'';
+      Store.patch(scope,id,{done:!!f.realizeDate,fields:f},{date,label:'灵感日期'});
+      State.render();
+      return;
+    }
+  }
+  Store.patchPath(scope,id,path,value,{date,label:'修改字段',quiet:true,render:false});
+}
+
+/* ============================================================
    导入导出 / 清空 / 图标
    ============================================================ */
 function exportData(){
@@ -2584,7 +3269,14 @@ function importData(){
         const incoming=Store.importJSON(reader.result,mode);
         State.render();
         Utils.toast(`导入成功：${Object.keys(incoming.byDate).length} 天记录（${mode==='merge'?'已合并':'已替换'}）`);
-      }catch(err){ Utils.toast('导入失败：'+err.message); }
+      }catch(err){
+        console.error('导入失败',err);
+        // 结构畸形不再把 JS 报错原文抛给用户
+        const msg=/forEach|is not a function|of undefined|of null|Cannot read/.test(String(err&&err.message||''))
+          ? '备份文件结构异常，可能已损坏或不是完整导出文件'
+          : (err&&err.message)||'未知错误';
+        Utils.toast('导入失败：'+msg);
+      }
     };
     reader.readAsText(file);
     input.value='';
@@ -2653,6 +3345,102 @@ const Calendar = {
 };
 
 /* ============================================================
+   CarryPanel：手动结转的目标选择面板
+   ============================================================ */
+const CarryPanel = {
+  st:null,
+  el(){
+    let m=document.getElementById('carry-modal');
+    if(!m){
+      m=document.createElement('div');
+      m.id='carry-modal';
+      document.body.appendChild(m);
+    }
+    return m;
+  },
+  open(scope,id,date){
+    const item=Store.find(scope,id,date);
+    if(!item){ Utils.toast('没找到这条记录'); return; }
+    const type=scope.indexOf('plan:')===0?scope.slice(5):'daily';
+    this.st={scope:scope,id:id,date:date,type:type,item:item,target:null};
+    this.render();
+    this.el().classList.add('show');
+  },
+  close(){ const m=document.getElementById('carry-modal'); if(m) m.classList.remove('show'); this.st=null; },
+  pick(key){ if(!this.st) return; this.st.target=key; this.render(); },
+  _nextDay(ds){ const x=new Date(Utils.parseDate(ds)); x.setDate(x.getDate()+1); return Utils.toDateStr(x); },
+  render(){
+    const st=this.st; if(!st) return;
+    const m=this.el();
+    const label={daily:'结转到哪一天？',weekly:'结转到哪一周？',monthly:'结转到哪一月？',yearly:'结转到哪一年？'}[st.type];
+    let body='';
+    if(st.item.carriedTo){
+      body=`<div class="carry-note">这条已经结转到其他周期了。还原会删除目标周期里的那一条副本。</div>
+        <div class="btn-row">
+          <button class="btn btn-sm btn-outline" style="flex:1;" data-action="carry-close">关闭</button>
+          <button class="btn btn-sm" style="flex:1;" data-action="carry-undo">还原到本期</button>
+        </div>`;
+    }else if(st.type==='daily'){
+      const min=this._nextDay(st.date);
+      body=`<div class="field"><div class="field-label">目标日期（只能选明天及以后）</div>
+        <input type="date" id="carry-date" class="input input-date" min="${min}" value="${st.target||min}"></div>
+        <div class="btn-row">
+          <button class="btn btn-sm btn-outline" style="flex:1;" data-action="carry-close">取消</button>
+          <button class="btn btn-sm" style="flex:1;" data-action="carry-do">确认结转</button>
+        </div>`;
+    }else{
+      const opts=Carry.targets(st.scope,st.item,st.date);
+      body=`<div class="carry-opts">${opts.map(o=>`<div class="carry-opt ${st.target===o.key?'active':''}" data-action="carry-pick" data-key="${o.key}">
+          <span class="co-label">${o.label}</span>${o.sub?`<span class="co-sub">${o.sub}</span>`:''}
+        </div>`).join('')}</div>
+        <div class="btn-row">
+          <button class="btn btn-sm btn-outline" style="flex:1;" data-action="carry-close">取消</button>
+          <button class="btn btn-sm${st.target?'':' btn-dim'}" style="flex:1;" data-action="carry-do">确认结转</button>
+        </div>`;
+    }
+    m.innerHTML=`<div class="carry-sheet">
+      <div class="carry-title">${label}</div>
+      <div class="carry-sub">${Utils.esc(st.item.text||'（未命名）')}　·　原在 ${Utils.esc(st.type==='daily'?st.date:(st.item.periodKey||''))}</div>
+      ${body}
+    </div>`;
+    // 面板挂在 body 上，view-container 的委托收不到，这里自己处理
+    m.onclick=e=>{
+      if(e.target===m){ this.close(); return; }
+      const a=e.target.closest('[data-action]');
+      if(!a) return;
+      e.preventDefault();
+      const act=a.dataset.action;
+      if(act==='carry-pick') this.pick(a.dataset.key);
+      else if(act==='carry-do') this.confirm();
+      else if(act==='carry-undo') this.undo();
+      else if(act==='carry-close') this.close();
+    };
+  },
+  confirm(){
+    const st=this.st; if(!st) return;
+    let key=st.target;
+    if(st.type==='daily'){
+      const inp=document.getElementById('carry-date');
+      key=inp?inp.value:'';
+      if(!key){ Utils.toast('请选择日期'); return; }
+      if(key<=st.date){ Utils.toast('请选择未来日期'); return; }
+    }
+    if(!key){ Utils.toast('请选择目标周期'); return; }
+    const ok=Carry.manual(st.scope,st.id,key,{date:st.date});
+    const sc=st.scope, id=st.id, dt=st.date;
+    this.close();
+    if(ok) Utils.toast('已结转','撤销',()=>Carry.undo(sc,id,dt));
+    else Utils.toast('结转失败');
+  },
+  undo(){
+    const st=this.st; if(!st) return;
+    const ok=Carry.undo(st.scope,st.id,st.date);
+    this.close();
+    Utils.toast(ok?'已还原':'还原失败');
+  }
+};
+
+/* ============================================================
    init：唯一事件委托入口
    ============================================================ */
 function init(){
@@ -2706,33 +3494,16 @@ function init(){
       },{label:'保存体重体脂',quiet:true,render:false});
       return;
     }
-    if(t.dataset.field){
-      const scope=t.dataset.scope,id=t.dataset.id,date=t.dataset.date,path=t.dataset.field;
-      if(!id){ // 尚未落库的空条目：先创建再写入
-        const it=Item.make('',{}, {sourceDate:date||State.currentDate,periodKey:date||State.currentDate});
-        if(path.indexOf('fields.')===0) it.fields[path.slice(7)]=t.value; else it[path]=t.value;
-        if(scope==='bodyMind.diet'){
-          const meal=(t.closest('.diet-row')&&t.closest('.diet-row').dataset.meal)||'';
-          it.fields.meal=meal;
-        }
-        Store.add(scope,it,{date:date||State.currentDate,label:'保存字段'});
-      }else{
-        let value=t.value;
-        if(t.type==='checkbox') value=t.checked;
-        if(t.type==='range') value=Number(t.value);
-        if(t.type==='number') value=t.value===''?'':Number(t.value);
-        if(path==='fields.realizeDate'||path==='fields.planDate'){
-          const it=Store.find(scope,id,date);
-          if(it&&path==='fields.realizeDate'){ value=value?value:null; }
-          if(it){ const f=Object.assign({},it.fields); f[path.slice(7)]=value; if(f.planDate&&f.realizeDate) f.durationToRealize=Utils.daysBetween(f.planDate,f.realizeDate); Store.patch(scope,id,{done:!!f.realizeDate,fields:f},{date,label:'计划日期'}); return; }
-        }
-        if(path==='fields.startDate'||path==='fields.realizeDate'){
-          const it=Store.find(scope,id,date);
-          if(it){ const f=Object.assign({},it.fields); f[path.slice(7)]=value; if(f.startDate&&f.realizeDate) f.durationToRealize=Utils.daysBetween(f.startDate,f.realizeDate); Store.patch(scope,id,{done:!!f.realizeDate,fields:f},{date,label:'灵感日期'}); return; }
-        }
-        Store.patchPath(scope,id,path,value,{date,label:'修改字段',quiet:true,render:false});
-      }
-    }
+    if(t.dataset.field){ saveField(t); }
+  });
+  // 打字即存：不必等失去焦点（不重绘，不打断输入）
+  let typingTimer=null;
+  vc.addEventListener('input',e=>{
+    const t=e.target;
+    if(!t.dataset||!t.dataset.field) return;
+    if(/^(checkbox|range|date|time|datetime-local|file)$/.test(t.type||'')) return;
+    clearTimeout(typingTimer);
+    typingTimer=setTimeout(()=>saveField(t),700);
   });
   // 图标上传（动态生成的节点）
   document.addEventListener('change',e=>{
